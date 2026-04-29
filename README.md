@@ -31,10 +31,11 @@ graph TD
 *(For complete system diagrams, see `/docs/fintracker-architectural-doc.md`)*
 
 ## Tech Stack
-Frontend:	Angular (via fintracker-ui)
-Backend:	Python (Native Lambdas)
-Cloud:		AWS (Step Functions, S3, Textract, Comprehend, DynamoDB, EventBridge)
-DevOps:		Poetry, pytest, AWS CDK
+* **Frontend:** Angular (via fintracker-ui)
+* **Backend:** Python (Native Lambdas)
+* **Cloud:** AWS (Step Functions, S3, Textract, Comprehend, DynamoDB, EventBridge)
+* **DevOps:** Poetry, AWS CDK
+* **Testing:** pytest
 
 ## Modules & Interfaces
 
