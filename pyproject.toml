@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "data-pipeline-service"
+version = "1.0.0"
+description = "FinTracker Data Pipeline Service — Statement Upload Step Functions Orchestrator"
+authors = ["Van Vo"]
+readme = "README.md"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+aws-lambda-powertools = { version = "^3.10.1", extras = ["tracer"] }
+boto3 = "^1.37.28"
+pillow = "^11.2.1"
+pydantic-settings = "^2.8.1"
+pydantic = { version = "^2.11.3", extras = ["email"] }
+requests = "^2.32.3"
+tenacity = "^9.1.2"
+ultralytics = "^8.3.110"
+torchvision = ">=0.20.0"
+
+[tool.poetry.group.dev.dependencies]
+boto3-stubs = { version = "^1.37.28", extras = ["dynamodb", "s3", "stepfunctions", "textract"] }
+moto = { version = "^5.1.0", extras = ["dynamodb", "s3", "stepfunctions"] }
+mypy = "^1.15.0"
+pytest-asyncio = "^0.25.3"
+pytest = "^8.3.5"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
