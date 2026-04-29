@@ -34,7 +34,7 @@ class TestCleanMerchant:
         assert _clean_merchant("UBER EATS") == "uber eats"
 
     def test_collapses_whitespace(self):
-        assert _clean_merchant("  SHELL   OIL  ") == "shell   oil"
+        assert _clean_merchant("  SHELL   OIL  ") == "shell oil"
 
 
 class TestParseAmount:
@@ -70,7 +70,7 @@ class TestRegexCategorize:
 
 @mock_aws
 class TestNormalizeAndCategorize:
-    def setup_method(self):
+    def setup_method(self, method):
         """Seed MerchantRegistry DynamoDB for registry lookup tests."""
         import os
         os.environ["PIPELINE_TABLE"] = "FinTracker_DataPipeline_Test"
@@ -96,6 +96,10 @@ class TestNormalizeAndCategorize:
             "sub_category": "Pets",
             "confidence": Decimal("0.95"),
         })
+
+        # Override the global table in the repository to use the mock table
+        from src.crud import pipeline_repository
+        pipeline_repository._pipeline_table = table
 
     def test_regex_path_no_dynamo_call(self):
         """Uber should resolve via Regex — DynamoDB should NOT be queried."""
