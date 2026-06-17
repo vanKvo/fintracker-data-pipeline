@@ -84,3 +84,6 @@ graph TD
     ```
 
 </details>
+
+## License
+MIT
