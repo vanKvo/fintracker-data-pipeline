@@ -14,11 +14,11 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from src.schemas.pipeline import RawTransaction, TextractOutput
-from src.services.normalizer_service import (
+from src.extractor.schemas import RawTransaction, TextractOutput
+from src.categorizer.service import _regex_categorize
+from src.normalizer.service import (
     _clean_merchant,
     _parse_amount,
-    _regex_categorize,
     normalize_and_categorize,
 )
 
@@ -98,8 +98,10 @@ class TestNormalizeAndCategorize:
         })
 
         # Override the global table in the repository to use the mock table
-        from src.crud import pipeline_repository
-        pipeline_repository._pipeline_table = table
+        from src.categorizer import repository as categorizer_repo
+        from src.statement_ingestion import repository as ingestion_repo
+        categorizer_repo._pipeline_table = table
+        ingestion_repo._pipeline_table = table
 
     def test_regex_path_no_dynamo_call(self):
         """Uber should resolve via Regex — DynamoDB should NOT be queried."""
@@ -112,7 +114,7 @@ class TestNormalizeAndCategorize:
                 RawTransaction(raw_merchant="UBER TRIP", raw_amount="14.50", raw_date="2026-04-01")
             ],
         )
-        with patch("src.services.normalizer_service.lookup_merchant") as mock_lookup:
+        with patch("src.categorizer.service.lookup_merchant") as mock_lookup:
             result = normalize_and_categorize(textract_output)
 
         mock_lookup.assert_not_called()
@@ -130,7 +132,7 @@ class TestNormalizeAndCategorize:
                 RawTransaction(raw_merchant="petco", raw_amount="32.00", raw_date="2026-04-05")
             ],
         )
-        with patch("src.services.normalizer_service._comprehend_categorize") as mock_comprehend:
+        with patch("src.categorizer.service._comprehend_categorize") as mock_comprehend:
             result = normalize_and_categorize(textract_output)
 
         mock_comprehend.assert_not_called()

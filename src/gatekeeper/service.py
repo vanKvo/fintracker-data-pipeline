@@ -1,28 +1,29 @@
 """Vision Gatekeeper Service — orchestrator-agnostic business logic.
 
 Filters uploaded files to extract only valid transaction pages using
-YOLOv8-Nano inference. Handles both PDF-to-image splitting and raw image formats.
+YOLOv8-Nano inference. Handles PDF-to-image splitting, CSV validation,
+and raw image formats (screenshots).
 
 __author__ = "Van Vo"
 """
 
 from __future__ import annotations
 
+import csv
 import io
 import os
 from typing import Any
 
 import boto3
-from botocore.exceptions import ClientError
 from PIL import Image
 
 from ..core.observability import logger
-from ..schemas.pipeline import GatekeeperOutput
+from .schemas import GatekeeperOutput, StatementFormat
 
-# NOTE: ultralytics is imported lazily inside the function to avoid cold-start
-# overhead in Lambdas that don't use this module.
 _YOLO_MODEL_PATH = os.environ.get("YOLO_MODEL_PATH", "/opt/yolov8n.pt")
 _s3_client = boto3.client("s3")
+
+_CSV_REQUIRED_HEADERS = {"date", "merchant", "amount"}
 
 
 def _load_yolo_model() -> Any:
@@ -43,6 +44,52 @@ def _is_pdf(data: bytes) -> bool:
     return data[:4] == b"%PDF"
 
 
+def _is_csv(s3_key: str, data: bytes) -> bool:
+    """Detect CSV by file extension and content sniffing.
+
+    Args:
+        s3_key: S3 object key.
+        data: Raw file bytes.
+
+    Returns:
+        True if the file appears to be a valid CSV.
+    """
+    if s3_key.lower().endswith(".csv"):
+        return True
+    try:
+        text = data[:4096].decode("utf-8", errors="replace")
+        csv.Sniffer().sniff(text)
+        return True
+    except csv.Error:
+        return False
+
+
+def _csv_has_valid_transactions(data: bytes) -> bool:
+    """Validate that a CSV file contains a recognizable transaction table.
+
+    Checks that the CSV has required column headers (date, merchant, amount)
+    and at least one data row.
+
+    Args:
+        data: Raw CSV bytes.
+
+    Returns:
+        True if the CSV has valid transaction data.
+    """
+    try:
+        text = data.decode("utf-8", errors="replace")
+        reader = csv.DictReader(io.StringIO(text))
+        if reader.fieldnames is None:
+            return False
+        normalized_headers = {h.strip().lower() for h in reader.fieldnames}
+        if not _CSV_REQUIRED_HEADERS.issubset(normalized_headers):
+            return False
+        first_row = next(reader, None)
+        return first_row is not None
+    except Exception:
+        return False
+
+
 def _pdf_to_images(pdf_bytes: bytes) -> list[Image.Image]:
     """Split a PDF into one PIL Image per page.
 
@@ -52,7 +99,7 @@ def _pdf_to_images(pdf_bytes: bytes) -> list[Image.Image]:
     Returns:
         List of PIL images, one per page.
     """
-    import fitz  # PyMuPDF — lightweight, no system poppler needed  # type: ignore[import-untyped]
+    import fitz  # type: ignore[import-untyped]
 
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
     images: list[Image.Image] = []
@@ -82,6 +129,23 @@ def _page_has_table(image: Image.Image, model: Any) -> bool:
     return False
 
 
+def _detect_format(s3_key: str, file_bytes: bytes) -> StatementFormat:
+    """Detect the format of the uploaded bank statement.
+
+    Args:
+        s3_key: S3 object key.
+        file_bytes: Raw file bytes.
+
+    Returns:
+        The detected StatementFormat.
+    """
+    if _is_pdf(file_bytes):
+        return StatementFormat.PDF
+    if _is_csv(s3_key, file_bytes):
+        return StatementFormat.CSV
+    return StatementFormat.IMAGE
+
+
 def run_gatekeeper(
     bucket: str,
     s3_key: str,
@@ -92,11 +156,12 @@ def run_gatekeeper(
 ) -> GatekeeperOutput:
     """Execute the Vision Gatekeeper pipeline step.
 
-    Downloads the uploaded file from S3, splits PDFs into page images,
-    and runs YOLOv8-Nano inference on each page to identify valid transaction pages.
+    Downloads the uploaded file from S3, detects the format (PDF, CSV, or image
+    screenshot), and validates that the file contains valid transaction data.
 
-    This function is orchestrator-agnostic — it can be called by a Lambda handler,
-    a Step Function task, or a local test runner.
+    For PDFs: splits into page images and runs YOLOv8-Nano table detection.
+    For CSVs: validates headers and row presence.
+    For images: runs YOLOv8-Nano table detection on the single image.
 
     Args:
         bucket: S3 bucket name.
@@ -114,8 +179,31 @@ def run_gatekeeper(
     response = _s3_client.get_object(Bucket=bucket, Key=s3_key)
     file_bytes = response["Body"].read()
 
+    statement_format = _detect_format(s3_key, file_bytes)
+    logger.info("Statement format detected", job_id=job_id, format=str(statement_format))
+
+    if statement_format == StatementFormat.CSV:
+        has_valid = _csv_has_valid_transactions(file_bytes)
+        logger.info(
+            "CSV gatekeeper complete",
+            job_id=job_id,
+            has_valid=has_valid,
+        )
+        return GatekeeperOutput(
+            job_id=job_id,
+            s3_key=s3_key,
+            user_id=user_id,
+            statement_id=statement_id,
+            account_id=account_id,
+            statement_format=statement_format,
+            valid_page_keys=[],
+            junk_page_keys=[],
+            csv_s3_key=s3_key if has_valid else None,
+            has_valid_pages=has_valid,
+        )
+
     images: list[Image.Image] = []
-    if _is_pdf(file_bytes):
+    if statement_format == StatementFormat.PDF:
         logger.info("PDF detected — splitting into page images", job_id=job_id)
         images = _pdf_to_images(file_bytes)
     else:
@@ -153,6 +241,7 @@ def run_gatekeeper(
         user_id=user_id,
         statement_id=statement_id,
         account_id=account_id,
+        statement_format=statement_format,
         valid_page_keys=valid_page_keys,
         junk_page_keys=junk_page_keys,
         has_valid_pages=has_valid,

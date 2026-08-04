@@ -53,7 +53,7 @@ class DataPipelineStack(Stack):
         s3_processor_fn = _lambda.Function(
             self, "S3ProcessorLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="src.api.handlers.s3_processor_handler",
+            handler="src.statement_ingestion.orchestrator.s3_processor_handler",
             code=_lambda.Code.from_asset("."),
             memory_size=256,
             timeout=Duration.seconds(30),
@@ -64,7 +64,7 @@ class DataPipelineStack(Stack):
         gatekeeper_fn = _lambda.Function(
             self, "GatekeeperLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="src.api.handlers.gatekeeper_handler",
+            handler="src.gatekeeper.handler.gatekeeper_handler",
             code=_lambda.Code.from_asset("."),
             memory_size=1024,
             timeout=Duration.minutes(5),
@@ -76,7 +76,7 @@ class DataPipelineStack(Stack):
         ingestion_fn = _lambda.Function(
             self, "IngestionLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="src.api.handlers.ingestion_handler",
+            handler="src.extractor.handler.ingestion_handler",
             code=_lambda.Code.from_asset("."),
             memory_size=512,
             timeout=Duration.minutes(5),
@@ -90,7 +90,7 @@ class DataPipelineStack(Stack):
         normalizer_fn = _lambda.Function(
             self, "NormalizerLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="src.api.handlers.normalizer_handler",
+            handler="src.normalizer.handler.normalizer_handler",
             code=_lambda.Code.from_asset("."),
             memory_size=512,
             timeout=Duration.minutes(3),
@@ -107,7 +107,7 @@ class DataPipelineStack(Stack):
         ledger_push_fn = _lambda.Function(
             self, "LedgerPushLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="src.api.handlers.ledger_push_handler",
+            handler="src.data_dispatcher.handler.ledger_push_handler",
             code=_lambda.Code.from_asset("."),
             memory_size=256,
             timeout=Duration.minutes(3),
