@@ -103,14 +103,17 @@ def categorize_merchant(merchant: str) -> MerchantCategory:
     Returns:
         MerchantCategory with category, sub_category, confidence, and source.
     """
+    # REQ-DP-08: never log the merchant string itself — it's raw statement content (a real
+    # payee name), not an opaque ID. category/sub_category/source are classification labels,
+    # not PII, and are enough to debug the categorization path taken.
     result = _regex_categorize(merchant)
     if result:
-        logger.debug("Merchant categorized via Regex", merchant=merchant, category=result[0])
+        logger.debug("Merchant categorized via Regex", category=result[0])
         return MerchantCategory(category=result[0], sub_category=result[1], source="REGEX")
 
     cached = lookup_merchant(merchant)
     if cached:
-        logger.debug("Merchant found in registry", merchant=merchant)
+        logger.debug("Merchant found in registry", category=cached.get("category"))
         return MerchantCategory(
             category=cached["category"],
             sub_category=cached.get("sub_category", "General"),
@@ -119,7 +122,7 @@ def categorize_merchant(merchant: str) -> MerchantCategory:
         )
 
     category, sub_category, confidence = _comprehend_categorize(merchant)
-    logger.info("Comprehend categorized", merchant=merchant, category=category)
+    logger.info("Comprehend categorized", category=category)
     cache_merchant(merchant, category, sub_category, confidence)
     return MerchantCategory(
         category=category,
