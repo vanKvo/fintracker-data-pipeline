@@ -27,9 +27,21 @@ def ledger_push_handler(event: dict[str, Any], context: Any) -> dict:
     """
     job_id: str = event["job_id"]
     user_id: str = event["user_id"]
+    statement_id: str = event["statement_id"]
     transactions: list[dict] = event.get("transactions", [])
 
-    result = push_transactions_to_ledger(job_id, transactions)
-    update_job_status(job_id, user_id, PipelineStatus.COMPLETED)
+    result = push_transactions_to_ledger(job_id, user_id, statement_id, transactions)
+
+    if result.all_succeeded:
+        status = PipelineStatus.COMPLETED
+        error = None
+    elif result.success_count > 0:
+        status = PipelineStatus.PARTIALLY_COMPLETED
+        error = f"{result.total_count - result.success_count} of {result.total_count} transactions failed to push"
+    else:
+        status = PipelineStatus.FAILED
+        error = "All transactions failed to push to the Ledger" if result.total_count else None
+
+    update_job_status(job_id, user_id, status, error=error)
 
     return result.model_dump()
