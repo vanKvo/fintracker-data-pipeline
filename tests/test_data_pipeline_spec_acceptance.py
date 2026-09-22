@@ -1,10 +1,9 @@
-"""Tests for requirement business rules that are NOT yet implemented.
+"""Acceptance tests for requirements in docs/fintracker-data-pipelines/data-pipeline-spec-01.md,
+spanning gatekeeper, extractor, normalizer, data_dispatcher, and ledger_client.
 
-These are intentionally F2P ("fail to pass"): they encode the desired
-behavior from docs/fintracker-data-pipelines/data-pipeline-spec-01.md and
-are expected to fail against today's code. They exist so the corresponding
-feature work has a concrete, already-written acceptance test to turn green
-— see data-pipeline-tests-01.md for the requirement each one maps to.
+Each class was written F2P ("fail to pass") against its requirement before that
+requirement's implementation landed. REQ-DP-03 is still red (not yet implemented);
+the rest are now green — see data-pipeline-tests-01.md for the requirement each maps to.
 
 __author__ = "Van Vo"
 """
