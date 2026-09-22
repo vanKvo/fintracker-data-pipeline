@@ -16,8 +16,8 @@ from ..core.observability import logger
 
 _dynamodb = boto3.resource("dynamodb")
 
-_PIPELINE_TABLE_NAME = os.environ.get("PIPELINE_TABLE", "FinTracker_DataPipeline")
-_pipeline_table = _dynamodb.Table(_PIPELINE_TABLE_NAME)
+_MERCHANT_REGISTRY_TABLE_NAME = os.environ.get("MERCHANT_REGISTRY_TABLE", "FinTracker_MerchantRegistry")
+_merchant_registry_table = _dynamodb.Table(_MERCHANT_REGISTRY_TABLE_NAME)
 
 
 def lookup_merchant(merchant_key: str) -> Optional[dict]:
@@ -30,7 +30,7 @@ def lookup_merchant(merchant_key: str) -> Optional[dict]:
         A dict with category/sub_category/confidence or None if not found.
     """
     try:
-        response = _pipeline_table.get_item(
+        response = _merchant_registry_table.get_item(
             Key={"PK": merchant_key, "SK": "DETAILS"}
         )
         return response.get("Item")
@@ -48,7 +48,7 @@ def cache_merchant(merchant_key: str, category: str, sub_category: str, confiden
         sub_category: Sub-category label.
         confidence: Comprehend confidence score.
     """
-    _pipeline_table.put_item(
+    _merchant_registry_table.put_item(
         Item={
             "PK": merchant_key,
             "SK": "DETAILS",

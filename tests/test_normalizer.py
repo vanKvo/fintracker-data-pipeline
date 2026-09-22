@@ -73,12 +73,13 @@ class TestNormalizeAndCategorize:
     def setup_method(self, method):
         """Seed MerchantRegistry DynamoDB for registry lookup tests."""
         import os
-        os.environ["PIPELINE_TABLE"] = "FinTracker_DataPipeline_Test"
+        os.environ["MERCHANT_REGISTRY_TABLE"] = "FinTracker_MerchantRegistry_Test"
+        os.environ["JOB_TRACKER_TABLE"] = "FinTracker_JobTracker_Test"
         os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
 
         dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
         table = dynamodb.create_table(
-            TableName="FinTracker_DataPipeline_Test",
+            TableName="FinTracker_MerchantRegistry_Test",
             KeySchema=[
                 {"AttributeName": "PK", "KeyType": "HASH"},
                 {"AttributeName": "SK", "KeyType": "RANGE"},
@@ -97,11 +98,16 @@ class TestNormalizeAndCategorize:
             "confidence": Decimal("0.95"),
         })
 
-        # Override the global table in the repository to use the mock table
+        # Override the global table in the repository to use the mock table. Only the
+        # MerchantRegistry table is actually exercised by normalize_and_categorize (the service
+        # layer tested below never calls update_job_status — that's the handler's job), but the
+        # ingestion_repo table still needs to resolve to *something* moto knows about so an
+        # unrelated accidental call doesn't raise ResourceNotFoundException instead of failing
+        # the assertion it should fail.
         from src.categorizer import repository as categorizer_repo
         from src.statement_ingestion import repository as ingestion_repo
-        categorizer_repo._pipeline_table = table
-        ingestion_repo._pipeline_table = table
+        categorizer_repo._merchant_registry_table = table
+        ingestion_repo._job_tracker_table = table
 
     def test_regex_path_no_dynamo_call(self):
         """Uber should resolve via Regex — DynamoDB should NOT be queried."""
