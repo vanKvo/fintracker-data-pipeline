@@ -9,6 +9,7 @@ from typing import Any
 
 from ..core.observability import logger, tracer
 from ..extractor.schemas import TextractOutput
+from ..shared.exceptions import PipelineError
 from ..shared.schemas import PipelineStatus
 from ..statement_ingestion.service import update_job_status
 from .service import normalize_and_categorize
@@ -25,9 +26,22 @@ def normalizer_handler(event: dict[str, Any], context: Any) -> dict:
 
     Returns:
         Dict with list of serialized NormalizedTransaction objects.
+
+    Raises:
+        Exception: Re-raised after recording job status FAILED, so the Step
+            Functions execution still fails and can be caught/retried at
+            the state-machine level.
     """
     tx_output = TextractOutput(**event)
-    normalized = normalize_and_categorize(tx_output)
+
+    try:
+        normalized = normalize_and_categorize(tx_output)
+    except Exception as e:
+        reason = e.reason if isinstance(e, PipelineError) else "NORMALIZATION_FAILED"
+        logger.exception("Normalization failed", job_id=tx_output.job_id, reason=reason)
+        update_job_status(tx_output.job_id, tx_output.user_id, PipelineStatus.FAILED, error=str(e))
+        raise
+
     update_job_status(tx_output.job_id, tx_output.user_id, PipelineStatus.NORMALIZING)
     return {
         "job_id": tx_output.job_id,

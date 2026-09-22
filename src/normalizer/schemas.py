@@ -24,3 +24,9 @@ class NormalizedTransaction(BaseModel):
     source: str = "STATEMENT_UPLOAD"
     type: str = "SALE"
     status: str = "PENDING_APPROVAL"
+    confidence: Decimal = Decimal("1.00")
+    needs_review: bool = False
+    # REQ-STMT-02: the Ledger's bulk-create endpoint dedupes on (statement_id, row_fingerprint)
+    # — a 64-char lowercase-hex digest, required on every line. See normalizer/service.py for
+    # how it's computed.
+    row_fingerprint: str

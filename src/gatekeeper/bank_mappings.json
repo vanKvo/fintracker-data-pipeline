@@ -1,0 +1,204 @@
+{
+  "version": "1.0",
+  "banks": {
+    "chase": {
+      "name": "JPMorgan Chase",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Details": "transaction_type",
+        "Posting Date": "transaction_date",
+        "Post Date": "transaction_date",
+        "Transaction Date": "transaction_date",
+        "Description": "description",
+        "Amount": "amount",
+        "Type": "category",
+        "Balance": "running_balance",
+        "Check or Slip #": "check_number"
+      }
+    },
+    "bank_of_america": {
+      "name": "Bank of America",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Date": "transaction_date",
+        "Posting Date": "transaction_date",
+        "Description": "description",
+        "Payee": "description",
+        "Amount": "amount",
+        "Running Bal.": "running_balance",
+        "Running Balance": "running_balance"
+      }
+    },
+    "wells_fargo": {
+      "name": "Wells Fargo",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "notes": "Wells Fargo standard CSV export is headerless by default, but header-enabled exports use these field names.",
+      "field_mappings": {
+        "Date": "transaction_date",
+        "Transaction Date": "transaction_date",
+        "Amount": "amount",
+        "Check Number": "check_number",
+        "Description": "description",
+        "Memo": "secondary_description"
+      }
+    },
+    "citibank": {
+      "name": "Citibank",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "split_columns",
+      "field_mappings": {
+        "Status": "status",
+        "Date": "transaction_date",
+        "Posting Date": "transaction_date",
+        "Description": "description",
+        "Debit": "debit_amount",
+        "Credit": "credit_amount"
+      }
+    },
+    "capital_one": {
+      "name": "Capital One",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%Y-%m-%d",
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "split_columns",
+      "field_mappings": {
+        "Transaction Date": "transaction_date",
+        "Posted Date": "transaction_date",
+        "Account Number": "card_last_four",
+        "Description": "description",
+        "Transaction Description": "description",
+        "Transaction Type": "type",
+        "Transaction Amount": "amount",
+        "Balance": "balance"
+      }
+    },
+    "us_bank": {
+      "name": "U.S. Bank",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Date": "transaction_date",
+        "Transaction Date": "transaction_date",
+        "Transaction": "description",
+        "Name": "description",
+        "Memo": "secondary_description",
+        "Amount": "amount"
+      }
+    },
+    "pnc_bank": {
+      "name": "PNC Bank",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Date": "transaction_date",
+        "Description": "description",
+        "Withdrawals": "debit_amount",
+        "Deposits": "credit_amount",
+        "Amount": "amount",
+        "Balance": "running_balance",
+        "Check Number": "check_number"
+      }
+    },
+    "td_bank": {
+      "name": "TD Bank",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Date": "transaction_date",
+        "Posting Date": "transaction_date",
+        "Description": "description",
+        "Merchant Name": "description",
+        "Amount": "amount",
+        "Balance": "running_balance"
+      }
+    },
+    "discover": {
+      "name": "Discover Financial",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Trans. Date": "transaction_date",
+        "Post Date": "transaction_date",
+        "Description": "description",
+        "Amount": "amount",
+        "Category": "category"
+      }
+    },
+    "charles_schwab": {
+      "name": "Charles Schwab",
+      "country": "US",
+      "export_formats": [
+        "CSV"
+      ],
+      "date_formats": [
+        "%m/%d/%Y"
+      ],
+      "amount_sign_convention": "standard",
+      "field_mappings": {
+        "Date": "transaction_date",
+        "Action": "transaction_type",
+        "Symbol": "symbol",
+        "Description": "description",
+        "Quantity": "quantity",
+        "Price": "price",
+        "Amount": "amount"
+      }
+    }
+  }
+}
