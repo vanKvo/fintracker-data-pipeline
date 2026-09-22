@@ -34,13 +34,24 @@ def get_config() -> dict[str, str]:
 
 
 def get_param(key: str, default: str = "") -> str:
-    """Retrieve a single SSM parameter value by its short key name.
+    """Retrieve a single config value by its short key name.
+
+    Checks a plain Lambda environment variable of the same name first — dev's Terraform
+    environment (infrastructure/terraform/environments/dev) passes values like
+    INTERNAL_API_KEY straight through as env vars rather than provisioning SSM parameters, so
+    this is what makes that work without every caller needing to know which source it came
+    from. Falls back to SSM SecureString otherwise, which is what a real (staging/prod)
+    environment must still use (CLAUDE.md's Python Standards: "Secrets via AWS SSM Parameter
+    Store, never hardcoded") — this fallback is what a hardened environment relies on.
 
     Args:
         key: The short parameter name (e.g. "MERCHANT_TABLE").
-        default: Fallback value if the key is not found.
+        default: Fallback value if the key is not found in either source.
 
     Returns:
         The parameter value string.
     """
+    env_value = os.environ.get(key)
+    if env_value is not None:
+        return env_value
     return get_config().get(f"{_SSM_PATH}/{key}", default)

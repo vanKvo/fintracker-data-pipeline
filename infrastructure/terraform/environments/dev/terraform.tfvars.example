@@ -1,0 +1,37 @@
+# Copy this file to terraform.tfvars and fill in real values before `terraform apply`.
+# terraform.tfvars is gitignored on purpose — internal_api_key alone makes it a secrets file, and
+# CLAUDE.md's exception-handling/secrets guidance ("never hardcoded") still applies to what gets
+# committed even in dev, just not to which AWS service holds it.
+
+aws_region  = "us-east-1"
+aws_profile = "fintracker-dev" # or remove this line to use your default AWS credentials
+env_name    = "dev"
+
+# Must match whatever the Ledger's STATEMENTS_BUCKET_NAME is set to for this same environment.
+statements_bucket_name = "fintracker-statements-dev"
+
+# Three separate tables (job tracker / merchant registry / bank column mappings) — see
+# variables.tf for why. Defaults are fine to leave as-is; override only if you need to avoid a
+# name collision in a shared AWS account.
+job_tracker_table_name       = "FinTracker_JobTracker_Dev"
+merchant_registry_table_name = "FinTracker_MerchantRegistry_Dev"
+bank_mapping_table_name      = "FinTracker_BankMapping_Dev"
+
+# From the shared Cognito User Pool (User Profile service's identity stack).
+cognito_user_pool_id        = "us-east-1_XXXXXXXXX"
+cognito_user_pool_client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# The Ledger normally runs locally (`mvn spring-boot:run`, see the root CLAUDE.md) — a Lambda
+# running in real AWS cannot reach `localhost`. Point this at a tunnel to your local Ledger
+# (e.g. an ngrok/Cloudflare Tunnel URL) or a real deployed dev Ledger.
+ledger_api_url = "https://your-tunnel-or-dev-ledger.example.com"
+
+# Must match the Ledger's own internal-API-key value for this environment (whatever it reads to
+# authenticate the X-Internal-User-Id + key pair on POST /v1/transactions/internal).
+internal_api_key = "REPLACE_WITH_DEV_INTERNAL_API_KEY"
+
+cors_allowed_origins = ["http://localhost:4200"]
+
+# Run the packaging step from the service root first (see infrastructure/terraform/README.md),
+# which produces this directory (services/fintracker-data-pipeline/package/).
+lambda_source_dir = "../../../../package"

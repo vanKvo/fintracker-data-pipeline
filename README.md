@@ -34,7 +34,7 @@ graph TD
 * **Frontend:** Angular (via fintracker-ui)
 * **Backend:** Python (Native Lambdas)
 * **Cloud:** AWS (Step Functions, S3, Textract, Comprehend, DynamoDB, EventBridge)
-* **DevOps:** Poetry, AWS CDK
+* **DevOps:** Poetry, Terraform (`infrastructure/terraform/`)
 * **Testing:** pytest
 
 ## Modules & Interfaces
@@ -77,11 +77,9 @@ graph TD
     ```bash
     poetry run pytest
     ```
-4.  **Deployment Packaging:**
-    Prior to AWS CDK deployment, native Lambdas are packaged:
-    ```bash
-    pip install -t package/ .
-    ```
+4.  **Deploy infrastructure:**
+    See `infrastructure/terraform/README.md` — build the shared Lambda package, then
+    `terraform apply` from `infrastructure/terraform/environments/dev`.
 
 </details>
 

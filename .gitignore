@@ -37,3 +37,17 @@
 .DS_Store
 Thumbs.db
 .env
+
+# Terraform
+# .terraform.lock.hcl is intentionally NOT ignored — it pins provider versions and should be
+# committed, same as a package-lock.json.
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfvars
+**/*.tfplan
+infrastructure/terraform/environments/*/build/
+
+# Lambda deployment package (produced locally by the packaging step before `terraform apply`)
+/package/
+
