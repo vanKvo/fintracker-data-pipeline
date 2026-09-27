@@ -15,12 +15,14 @@ __author__ = "Van Vo"
 
 from __future__ import annotations
 
+import json
 import os
 
 import requests as _requests
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from ..core.observability import logger
+from ..shared.sigv4 import sign_headers
 from .schemas import LedgerPushResult
 
 _LEDGER_API_URL = os.environ.get("LEDGER_API_URL", "")
@@ -62,13 +64,14 @@ def _to_ledger_line(tx: dict) -> dict:
     retry=retry_if_exception(_is_throttled),
     reraise=True,
 )
-def _push_bulk(body: dict, headers: dict) -> dict:
-    resp = _requests.post(
-        f"{_LEDGER_API_URL}/api/v1/ledger/transactions/internal/bulk",
-        json=body,
-        headers=headers,
-        timeout=30,
-    )
+def _push_bulk(url: str, body: dict, base_headers: dict) -> dict:
+    # Serialize once and sign those exact bytes — sign_headers' signature covers a hash of the
+    # payload, so it must sign precisely what gets sent, not whatever `requests`' own `json=`
+    # convenience param would re-encode. Re-signed fresh on every retry attempt (a stale
+    # X-Amz-Date risks rejection at the edge if a prior attempt was held up).
+    payload = json.dumps(body).encode("utf-8")
+    headers = sign_headers("POST", url, {**base_headers, "Content-Type": "application/json"}, payload)
+    resp = _requests.post(url, data=payload, headers=headers, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
@@ -82,11 +85,13 @@ def push_transactions_to_ledger(
     """Push one statement's normalized transactions to the Ledger in a single bulk call.
 
     All transactions are created with status PENDING_APPROVAL via
-    service-to-service auth (internal API key), scoped to the owning
-    tenant via the X-Internal-User-Id header — the Ledger's
-    UserContextFilter enforces scoping on this header, not on any
-    user_id/account_id field embedded in the transaction body
-    (REQ-DP-06 "Tenant Scoping on the Ledger Push").
+    service-to-service auth (SigV4-signed with this Lambda's own execution
+    role, verified at the edge by the Ledger's InternalCallerFilter — see
+    shared/sigv4.py), scoped to the owning tenant via the
+    X-Internal-User-Id header — the Ledger's UserContextFilter enforces
+    scoping on this header, not on any user_id/account_id field embedded
+    in the transaction body (REQ-DP-06 "Tenant Scoping on the Ledger
+    Push").
 
     Args:
         job_id: Step Function execution ID for logging.
@@ -105,6 +110,7 @@ def push_transactions_to_ledger(
     if not transactions:
         return LedgerPushResult(job_id=job_id, success_count=0, total_count=0, all_succeeded=True)
 
+    url = f"{_LEDGER_API_URL}/api/v1/ledger/transactions/internal/bulk"
     headers = {
         "X-Internal-User-Id": user_id,
     }
@@ -114,7 +120,7 @@ def push_transactions_to_ledger(
     }
 
     try:
-        result = _push_bulk(body, headers)
+        result = _push_bulk(url, body, headers)
     except Exception as e:
         # Never log the request body — merchant/amount/account details are sensitive
         # statement content (REQ-DP-08 PII/log hygiene).

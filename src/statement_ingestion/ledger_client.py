@@ -12,6 +12,7 @@ import requests as _requests
 
 from ..core.observability import logger
 from ..shared.exceptions import StatementOwnerNotFoundError
+from ..shared.sigv4 import sign_headers
 
 _LEDGER_API_URL = os.environ.get("LEDGER_API_URL", "")
 
@@ -47,14 +48,9 @@ def get_verified_statement_owner(statement_id: str) -> StatementOwner:
     Raises:
         StatementOwnerNotFoundError: the Ledger has no statement with this id.
     """
-    headers = {
-        "X-Internal-User-Id": _UNKNOWN_CALLER_SENTINEL,
-    }
-    response = _requests.get(
-        f"{_LEDGER_API_URL}/api/v1/ledger/statements/internal/{statement_id}/owner",
-        headers=headers,
-        timeout=10,
-    )
+    url = f"{_LEDGER_API_URL}/api/v1/ledger/statements/internal/{statement_id}/owner"
+    headers = sign_headers("GET", url, {"X-Internal-User-Id": _UNKNOWN_CALLER_SENTINEL})
+    response = _requests.get(url, headers=headers, timeout=10)
     if response.status_code == 404:
         logger.warning("Statement owner lookup found no such statement", statement_id=statement_id)
         raise StatementOwnerNotFoundError(f"No statement found for id {statement_id}")
