@@ -30,27 +30,43 @@ class TestGetVerifiedStatementOwner:
         response = _mock_response(
             200, {"statementId": "stmt-1", "accountId": "acct-1", "userId": "user-1"}
         )
-        with patch("src.statement_ingestion.ledger_client._requests.get", return_value=response) as mock_get:
+        with (
+            patch("src.statement_ingestion.ledger_client._requests.get", return_value=response) as mock_get,
+            patch("src.statement_ingestion.ledger_client.sign_headers", return_value={"signed": "true"}),
+        ):
             owner = get_verified_statement_owner("stmt-1")
 
         assert owner == StatementOwner(account_id="acct-1", user_id="user-1")
         args, kwargs = mock_get.call_args
         assert args[0].endswith("/api/v1/ledger/statements/internal/stmt-1/owner")
 
-    def test_sends_a_sentinel_user_header_not_a_real_identity(self):
+    def test_signs_the_request_with_a_sentinel_user_header_not_a_real_identity(self):
         # This call's whole purpose is to discover the real user — it must never assert one of
         # its own, but UserContextFilter (Ledger-side) still requires *a* syntactically valid
-        # UUID on every internal route, this one included.
+        # UUID on every internal route, this one included. Signing (not a shared secret) is
+        # what proves caller identity to the Ledger's InternalCallerFilter.
         response = _mock_response(200, {"statementId": "s", "accountId": "a", "userId": "u"})
-        with patch("src.statement_ingestion.ledger_client._requests.get", return_value=response) as mock_get:
+        with (
+            patch("src.statement_ingestion.ledger_client._requests.get", return_value=response) as mock_get,
+            patch(
+                "src.statement_ingestion.ledger_client.sign_headers",
+                return_value={"X-Internal-User-Id": "00000000-0000-0000-0000-000000000000", "Authorization": "signed"},
+            ) as mock_sign,
+        ):
             get_verified_statement_owner("stmt-1")
 
-        _, kwargs = mock_get.call_args
-        assert kwargs["headers"]["X-Internal-User-Id"] == "00000000-0000-0000-0000-000000000000"
+        _, sign_kwargs = mock_sign.call_args
+        signed_headers = mock_sign.return_value
+        _, get_kwargs = mock_get.call_args
+        assert mock_sign.call_args.args[2]["X-Internal-User-Id"] == "00000000-0000-0000-0000-000000000000"
+        assert get_kwargs["headers"] == signed_headers
 
     def test_404_raises_statement_owner_not_found(self):
         response = _mock_response(404)
-        with patch("src.statement_ingestion.ledger_client._requests.get", return_value=response):
+        with (
+            patch("src.statement_ingestion.ledger_client._requests.get", return_value=response),
+            patch("src.statement_ingestion.ledger_client.sign_headers", return_value={}),
+        ):
             try:
                 get_verified_statement_owner("no-such-statement")
                 assert False, "expected StatementOwnerNotFoundError"

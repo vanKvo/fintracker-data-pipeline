@@ -5,6 +5,7 @@ __author__ = "Van Vo"
 
 from __future__ import annotations
 
+import json
 import os
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +13,13 @@ os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
 from src.data_dispatcher.schemas import LedgerPushResult
 from src.data_dispatcher.service import _to_ledger_line, push_transactions_to_ledger
+
+
+def _passthrough_sign(method, url, headers, body=b""):
+    """Test double for sign_headers — SigV4 signing itself is covered by test_sigv4.py; here
+    we only need caller-supplied headers preserved so these tests stay deterministic without
+    real AWS credentials."""
+    return {**headers, "Authorization": "AWS4-HMAC-SHA256 test"}
 
 _TX = {
     "tx_date": "2026-04-01",
@@ -62,19 +70,25 @@ class TestPushTransactionsToLedger:
         assert result == LedgerPushResult(job_id="job-1", success_count=0, total_count=0, all_succeeded=True)
 
     def test_one_batch_call_covers_every_transaction(self):
-        with patch(
-            "src.data_dispatcher.service._requests.post", return_value=_mock_response(inserted=3)
-        ) as mock_post:
+        with (
+            patch(
+                "src.data_dispatcher.service._requests.post", return_value=_mock_response(inserted=3)
+            ) as mock_post,
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
+        ):
             push_transactions_to_ledger("job-1", "user-1", "stmt-1", [_TX, _TX, _TX])
 
         mock_post.assert_called_once()
         _, kwargs = mock_post.call_args
-        assert len(kwargs["json"]["transactions"]) == 3
+        assert len(json.loads(kwargs["data"])["transactions"]) == 3
 
     def test_inserted_and_skipped_duplicates_both_count_as_success(self):
-        with patch(
-            "src.data_dispatcher.service._requests.post",
-            return_value=_mock_response(inserted=1, skipped=1),
+        with (
+            patch(
+                "src.data_dispatcher.service._requests.post",
+                return_value=_mock_response(inserted=1, skipped=1),
+            ),
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
         ):
             result = push_transactions_to_ledger("job-1", "user-1", "stmt-1", [_TX, _TX])
 
@@ -82,9 +96,12 @@ class TestPushTransactionsToLedger:
         assert result.all_succeeded is True
 
     def test_failed_rows_mark_the_push_not_fully_succeeded(self):
-        with patch(
-            "src.data_dispatcher.service._requests.post",
-            return_value=_mock_response(inserted=1, failed=[{"index": 1, "reason": "bad row"}]),
+        with (
+            patch(
+                "src.data_dispatcher.service._requests.post",
+                return_value=_mock_response(inserted=1, failed=[{"index": 1, "reason": "bad row"}]),
+            ),
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
         ):
             result = push_transactions_to_ledger("job-1", "user-1", "stmt-1", [_TX, _TX])
 
@@ -93,8 +110,9 @@ class TestPushTransactionsToLedger:
         assert result.all_succeeded is False
 
     def test_request_failure_counts_every_row_as_failed_not_silently_dropped(self):
-        with patch(
-            "src.data_dispatcher.service._requests.post", side_effect=Exception("network error")
+        with (
+            patch("src.data_dispatcher.service._requests.post", side_effect=Exception("network error")),
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
         ):
             result = push_transactions_to_ledger("job-1", "user-1", "stmt-1", [_TX, _TX])
 

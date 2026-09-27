@@ -6,12 +6,20 @@ __author__ = "Van Vo"
 
 from __future__ import annotations
 
+import json
 import os
 from unittest.mock import MagicMock, patch
 
 os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
 
 from src.data_dispatcher.service import push_transactions_to_ledger
+
+
+def _passthrough_sign(method, url, headers, body=b""):
+    """Test double for sign_headers — SigV4 signing itself is covered by test_sigv4.py; here
+    we only need caller-supplied headers preserved so these tests stay deterministic without
+    real AWS credentials."""
+    return {**headers, "Authorization": "AWS4-HMAC-SHA256 test"}
 
 _TX = {
     "tx_date": "2026-04-01",
@@ -37,19 +45,25 @@ def _mock_bulk_response(inserted=1, skipped=0, failed=None) -> MagicMock:
 
 class TestTenantScopingHeader:
     def test_internal_user_id_header_forwarded_on_push(self):
-        with patch("src.data_dispatcher.service._requests.post", return_value=_mock_bulk_response()) as mock_post:
+        with (
+            patch("src.data_dispatcher.service._requests.post", return_value=_mock_bulk_response()) as mock_post,
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
+        ):
             push_transactions_to_ledger("job-1", "user-42", "stmt-1", [_TX])
 
         _, kwargs = mock_post.call_args
         assert kwargs["headers"]["X-Internal-User-Id"] == "user-42"
 
     def test_posts_to_the_real_bulk_endpoint_with_the_statement_id(self):
-        with patch("src.data_dispatcher.service._requests.post", return_value=_mock_bulk_response()) as mock_post:
+        with (
+            patch("src.data_dispatcher.service._requests.post", return_value=_mock_bulk_response()) as mock_post,
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
+        ):
             push_transactions_to_ledger("job-1", "user-42", "stmt-1", [_TX])
 
         args, kwargs = mock_post.call_args
         assert args[0].endswith("/api/v1/ledger/transactions/internal/bulk")
-        assert kwargs["json"]["statementId"] == "stmt-1"
+        assert json.loads(kwargs["data"])["statementId"] == "stmt-1"
 
 
 class TestPiiLogHygiene:
@@ -59,6 +73,7 @@ class TestPiiLogHygiene:
                 "src.data_dispatcher.service._requests.post",
                 side_effect=Exception("network error"),
             ),
+            patch("src.data_dispatcher.service.sign_headers", side_effect=_passthrough_sign),
             patch("src.data_dispatcher.service.logger") as mock_logger,
         ):
             push_transactions_to_ledger(
