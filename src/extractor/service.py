@@ -48,6 +48,10 @@ _s3_client = boto3.client("s3")
 
 _CANONICAL_FIELD_TO_RAW_FIELD = {"date": "raw_date", "merchant": "raw_merchant", "amount": "raw_amount"}
 
+# REQ-DP-09: an optional bank-provided category column, read whenever present — not part of the
+# confirmed mapping, since a missing/blank value just falls through to the regex categorizer.
+_BANK_CATEGORY_HEADER = "category"
+
 # REQ-DP-02: bounded so a large statement can't exhaust the Lambda's own
 # connection pool / the Ledger/Textract account-level concurrency limits —
 # see data-pipeline-notes-01.md for the reasoning behind this specific cap.
@@ -130,6 +134,8 @@ def parse_csv_transactions(bucket: str, csv_s3_key: str, confirmed_mapping: dict
     if missing_columns:
         raise InvalidCsvFormatError(f"Confirmed mapping references columns not present in the file: {sorted(missing_columns)}")
 
+    category_column = next((h for h in reader.fieldnames if h.strip().lower() == _BANK_CATEGORY_HEADER), None)
+
     transactions: list[RawTransaction] = []
     for row_num, row in enumerate(reader, start=2):
         try:
@@ -138,6 +144,7 @@ def parse_csv_transactions(bucket: str, csv_s3_key: str, confirmed_mapping: dict
                     raw_date=(row.get(confirmed_mapping["date"]) or "").strip(),
                     raw_merchant=(row.get(confirmed_mapping["merchant"]) or "").strip(),
                     raw_amount=(row.get(confirmed_mapping["amount"]) or "").strip(),
+                    raw_category=((row.get(category_column) or "").strip() or None) if category_column else None,
                     extraction_tier=ExtractionTier.CSV,
                     confidence=TIER_CONFIDENCE[ExtractionTier.CSV],
                 )

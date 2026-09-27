@@ -18,7 +18,8 @@
         "Transaction Date": "transaction_date",
         "Description": "description",
         "Amount": "amount",
-        "Type": "category",
+        "Category": "category",
+        "Type": "transaction_type",
         "Balance": "running_balance",
         "Check or Slip #": "check_number"
       }

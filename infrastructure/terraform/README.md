@@ -10,7 +10,7 @@ covers how it's provisioned.
 ```
 terraform/
 ├── modules/                     # Reusable, environment-agnostic building blocks
-│   ├── dynamodb_table/          # Generic PK/SK table, instantiated 3x (job tracker, merchant registry, bank mapping)
+│   ├── dynamodb_table/          # Generic PK/SK table, instantiated 2x (job tracker, bank mapping)
 │   ├── lambda_function/         # Generic: IAM role + log group + function, parameterized
 │   ├── s3_statement_bucket/     # Statement bucket + CORS + the S3 -> Lambda trigger
 │   ├── step_functions_pipeline/ # The Gatekeeper -> Extractor -> Normalizer -> LedgerPush state machine
@@ -78,12 +78,11 @@ none of those stages call the Ledger — only the final `LedgerPush` step does.
   access, CORS (for the browser's direct PUT), and the `PutObject` -> S3 Processor Lambda
   notification. This notification did not actually exist in the old CDK stack or in LocalStack —
   closing that gap is part of this migration, not a behavior change from before.
-- **Three DynamoDB tables**, one per repository module — `job_tracker_table_name`
-  (`JOB_TRACKER_TABLE`, TTL enabled — `update_job_status` sets a 7-day expiry),
-  `merchant_registry_table_name` (`MERCHANT_REGISTRY_TABLE`), and `bank_mapping_table_name`
+- **Two DynamoDB tables**, one per repository module — `job_tracker_table_name`
+  (`JOB_TRACKER_TABLE`, TTL enabled — `update_job_status` sets a 7-day expiry) and `bank_mapping_table_name`
   (`BANK_MAPPING_TABLE`). All on-demand billing (no per-table base cost — see the cost note
   below), each Lambda's IAM policy scoped to only the table(s) its own handler actually touches.
-- **Seven Lambdas**, one IAM role each, least-privilege inline policies (S3, Textract, Comprehend,
+- **Seven Lambdas**, one IAM role each, least-privilege inline policies (S3, Textract,
   DynamoDB, Step Functions task-token resolution — scoped per function, matching what each
   handler's code actually touches).
 - **Step Functions STANDARD state machine** — `Gatekeeper -> Extractor -> Normalizer -> LedgerPush`,

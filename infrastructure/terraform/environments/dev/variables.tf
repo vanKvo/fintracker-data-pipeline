@@ -35,11 +35,6 @@ variable "job_tracker_table_name" {
   default = "FinTracker_JobTracker_Dev"
 }
 
-variable "merchant_registry_table_name" {
-  type    = string
-  default = "FinTracker_MerchantRegistry_Dev"
-}
-
 variable "bank_mapping_table_name" {
   type    = string
   default = "FinTracker_BankMapping_Dev"

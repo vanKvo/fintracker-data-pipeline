@@ -92,7 +92,7 @@ def normalize_and_categorize(
             )
             continue
 
-        cat_result = categorize_merchant(merchant)
+        cat_result = categorize_merchant(merchant, bank_category=raw.raw_category)
         tx_type = "RETURN" if amount < 0 else "SALE"
 
         # REQ-DP-01 "Manual Review Routing": a row below the confidence

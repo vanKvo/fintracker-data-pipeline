@@ -23,23 +23,16 @@ data "archive_file" "lambda_package" {
   output_path = "${path.module}/build/lambda_package.zip"
 }
 
-# Three tables, not one — each repository module (statement_ingestion, categorizer, gatekeeper's
+# Two tables, not one — each repository module (statement_ingestion, gatekeeper's
 # mapping_repository) already addresses a distinct table via its own env var
-# (JOB_TRACKER_TABLE / MERCHANT_REGISTRY_TABLE / BANK_MAPPING_TABLE), so this mirrors the app's
-# actual data model instead of a single table standing in for three. On-demand billing means this
-# costs the same in aggregate request units/storage as one table would — the split buys capacity
-# isolation (a MerchantRegistry hot key can't throttle job-status writes) and tighter per-function
-# IAM scoping (below) for free, not at a price.
+# (JOB_TRACKER_TABLE / BANK_MAPPING_TABLE), so this mirrors the app's actual data model. On-demand
+# billing means the split costs nothing extra and buys capacity isolation and tighter per-function
+# IAM scoping (below). REQ-DP-09 removed the MerchantRegistry table: categorization no longer uses
+# a shared cache.
 module "job_tracker_table" {
   source     = "../../modules/dynamodb_table"
   table_name = var.job_tracker_table_name
   enable_ttl = true # update_job_status sets a 7-day "ttl" on every row
-  tags       = local.common_tags
-}
-
-module "merchant_registry_table" {
-  source     = "../../modules/dynamodb_table"
-  table_name = var.merchant_registry_table_name
   tags       = local.common_tags
 }
 
@@ -150,30 +143,15 @@ module "normalizer_lambda" {
   tags                     = local.common_tags
 
   environment_variables = merge(local.shared_env, {
-    JOB_TRACKER_TABLE       = module.job_tracker_table.table_name
-    MERCHANT_REGISTRY_TABLE = module.merchant_registry_table.table_name
+    JOB_TRACKER_TABLE = module.job_tracker_table.table_name
   })
 
   extra_policy_statements = [
-    {
-      # lookup_merchant (GetItem) on a cache hit; cache_merchant (PutItem) after a Comprehend
-      # fallback classification, to avoid re-classifying the same merchant next time.
-      sid       = "MerchantRegistryAccess"
-      actions   = ["dynamodb:GetItem", "dynamodb:PutItem"]
-      resources = [module.merchant_registry_table.table_arn]
-    },
     {
       # normalizer_handler.py only ever writes job status (update_job_status -> PutItem).
       sid       = "WriteJobStatus"
       actions   = ["dynamodb:PutItem"]
       resources = [module.job_tracker_table.table_arn]
-    },
-    {
-      # Comprehend custom classifiers DO support resource-level scoping (REQ-DP-07 fix) — scoped
-      # to this account/region's endpoint, not a blanket wildcard.
-      sid       = "ClassifyMerchant"
-      actions   = ["comprehend:ClassifyDocument"]
-      resources = ["arn:aws:comprehend:${var.aws_region}:${data.aws_caller_identity.current.account_id}:document-classifier-endpoint/fintracker-merchant-classifier"]
     },
   ]
 }

@@ -2,10 +2,8 @@
 
 Runtime-writable by design (REQ-DP-01 B. Constraints): a per-bank mapping
 committed as a bundled JSON file could not incorporate a user's manual
-correction without a redeploy. This follows the same write-back pattern as
-the Categorizer's MerchantRegistry (categorizer/repository.py) — seeded
-with a baseline mapping, then updated in place whenever a user confirms a
-correction in the mapping dialog.
+correction without a redeploy. Seeded with a baseline mapping, then updated
+in place whenever a user confirms a correction in the mapping dialog.
 
 __author__ = "Van Vo"
 """

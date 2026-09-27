@@ -37,6 +37,8 @@ class RawTransaction(BaseModel):
     raw_amount: str
     raw_date: str
     raw_type: Optional[str] = None
+    # REQ-DP-09: the bank's own category, when its CSV export has one.
+    raw_category: Optional[str] = None
     extraction_tier: ExtractionTier = ExtractionTier.TEXTRACT
     confidence: Decimal = Decimal("0.75")
 

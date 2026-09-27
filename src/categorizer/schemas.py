@@ -18,12 +18,3 @@ class MerchantCategory(BaseModel):
     sub_category: str
     confidence: Optional[Decimal] = None
     source: str = "REGEX"
-
-
-class MerchantRegistryItem(BaseModel):
-    """A cached merchant-to-category mapping in DynamoDB."""
-
-    merchant_key: str
-    category: str
-    sub_category: str
-    confidence: Decimal

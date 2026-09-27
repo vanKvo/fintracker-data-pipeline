@@ -6,10 +6,6 @@ output "job_tracker_table_name" {
   value = module.job_tracker_table.table_name
 }
 
-output "merchant_registry_table_name" {
-  value = module.merchant_registry_table.table_name
-}
-
 output "bank_mapping_table_name" {
   value = module.bank_mapping_table.table_name
 }
