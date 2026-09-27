@@ -1,7 +1,7 @@
 # Copy this file to terraform.tfvars and fill in real values before `terraform apply`.
-# terraform.tfvars is gitignored on purpose — internal_api_key alone makes it a secrets file, and
-# CLAUDE.md's exception-handling/secrets guidance ("never hardcoded") still applies to what gets
-# committed even in dev, just not to which AWS service holds it.
+# terraform.tfvars is gitignored on purpose — dev still shouldn't commit real account-specific
+# values, and CLAUDE.md's exception-handling/secrets guidance ("never hardcoded") applies to
+# what gets committed even in dev, just not to which AWS service holds it.
 
 aws_region  = "us-east-1"
 aws_profile = "fintracker-dev" # or remove this line to use your default AWS credentials
@@ -25,10 +25,6 @@ cognito_user_pool_client_id = "xxxxxxxxxxxxxxxxxxxxxxxxxx"
 # running in real AWS cannot reach `localhost`. Point this at a tunnel to your local Ledger
 # (e.g. an ngrok/Cloudflare Tunnel URL) or a real deployed dev Ledger.
 ledger_api_url = "https://your-tunnel-or-dev-ledger.example.com"
-
-# Must match the Ledger's own internal-API-key value for this environment (whatever it reads to
-# authenticate the X-Internal-User-Id + key pair on POST /v1/transactions/internal).
-internal_api_key = "REPLACE_WITH_DEV_INTERNAL_API_KEY"
 
 cors_allowed_origins = ["http://localhost:4200"]
 

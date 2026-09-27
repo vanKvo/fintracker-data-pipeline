@@ -37,19 +37,15 @@ class TestGetVerifiedStatementOwner:
         args, kwargs = mock_get.call_args
         assert args[0].endswith("/api/v1/ledger/statements/internal/stmt-1/owner")
 
-    def test_sends_internal_api_key_and_a_sentinel_user_header_not_a_real_identity(self):
+    def test_sends_a_sentinel_user_header_not_a_real_identity(self):
         # This call's whole purpose is to discover the real user — it must never assert one of
         # its own, but UserContextFilter (Ledger-side) still requires *a* syntactically valid
         # UUID on every internal route, this one included.
         response = _mock_response(200, {"statementId": "s", "accountId": "a", "userId": "u"})
-        with (
-            patch("src.statement_ingestion.ledger_client._requests.get", return_value=response) as mock_get,
-            patch("src.statement_ingestion.ledger_client.get_param", return_value="test-api-key"),
-        ):
+        with patch("src.statement_ingestion.ledger_client._requests.get", return_value=response) as mock_get:
             get_verified_statement_owner("stmt-1")
 
         _, kwargs = mock_get.call_args
-        assert kwargs["headers"]["x-internal-api-key"] == "test-api-key"
         assert kwargs["headers"]["X-Internal-User-Id"] == "00000000-0000-0000-0000-000000000000"
 
     def test_404_raises_statement_owner_not_found(self):

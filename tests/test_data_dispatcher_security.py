@@ -43,13 +43,6 @@ class TestTenantScopingHeader:
         _, kwargs = mock_post.call_args
         assert kwargs["headers"]["X-Internal-User-Id"] == "user-42"
 
-    def test_internal_api_key_still_present_alongside_tenant_header(self):
-        with patch("src.data_dispatcher.service._requests.post", return_value=_mock_bulk_response()) as mock_post:
-            push_transactions_to_ledger("job-1", "user-42", "stmt-1", [_TX])
-
-        _, kwargs = mock_post.call_args
-        assert "x-internal-api-key" in kwargs["headers"]
-
     def test_posts_to_the_real_bulk_endpoint_with_the_statement_id(self):
         with patch("src.data_dispatcher.service._requests.post", return_value=_mock_bulk_response()) as mock_post:
             push_transactions_to_ledger("job-1", "user-42", "stmt-1", [_TX])

@@ -38,7 +38,7 @@ def get_param(key: str, default: str = "") -> str:
 
     Checks a plain Lambda environment variable of the same name first — dev's Terraform
     environment (infrastructure/terraform/environments/dev) passes values like
-    INTERNAL_API_KEY straight through as env vars rather than provisioning SSM parameters, so
+    LEDGER_API_URL straight through as env vars rather than provisioning SSM parameters, so
     this is what makes that work without every caller needing to know which source it came
     from. Falls back to SSM SecureString otherwise, which is what a real (staging/prod)
     environment must still use (CLAUDE.md's Python Standards: "Secrets via AWS SSM Parameter

@@ -10,7 +10,6 @@ from dataclasses import dataclass
 
 import requests as _requests
 
-from ..core.config import get_param
 from ..core.observability import logger
 from ..shared.exceptions import StatementOwnerNotFoundError
 
@@ -23,10 +22,6 @@ _LEDGER_API_URL = os.environ.get("LEDGER_API_URL", "")
 # deliberately ignores it for this one route. The real access control is InternalCallerFilter's
 # caller-ARN allow-list, same as every other internal route.
 _UNKNOWN_CALLER_SENTINEL = "00000000-0000-0000-0000-000000000000"
-
-
-def _internal_api_key() -> str:
-    return get_param("INTERNAL_API_KEY")
 
 
 @dataclass(frozen=True)
@@ -53,7 +48,6 @@ def get_verified_statement_owner(statement_id: str) -> StatementOwner:
         StatementOwnerNotFoundError: the Ledger has no statement with this id.
     """
     headers = {
-        "x-internal-api-key": _internal_api_key(),
         "X-Internal-User-Id": _UNKNOWN_CALLER_SENTINEL,
     }
     response = _requests.get(

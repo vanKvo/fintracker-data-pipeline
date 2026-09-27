@@ -59,12 +59,6 @@ variable "ledger_api_url" {
   type        = string
 }
 
-variable "internal_api_key" {
-  description = "Shared secret for the internal (X-Internal-User-Id + this key) trust boundary between the Data Pipeline and the Ledger (CLAUDE.md's request-flow section). Plain tfvars for dev only, per this task's scope — production must move this to SSM SecureString, not follow this pattern."
-  type        = string
-  sensitive   = true
-}
-
 variable "max_statement_file_size_bytes" {
   type    = number
   default = 26214400 # 25 MiB, REQ-DP-04

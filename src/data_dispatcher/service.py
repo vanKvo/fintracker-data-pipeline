@@ -20,7 +20,6 @@ import os
 import requests as _requests
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-from ..core.config import get_param
 from ..core.observability import logger
 from .schemas import LedgerPushResult
 
@@ -30,14 +29,6 @@ _LEDGER_API_URL = os.environ.get("LEDGER_API_URL", "")
 # TransactionLine.type); SALE/RETURN is this pipeline's internal one (NormalizedTransaction) —
 # translated only at this wire boundary, not renamed pipeline-wide.
 _TYPE_TO_LEDGER = {"SALE": "PURCHASE", "RETURN": "CREDIT"}
-
-
-# Secret, not config — SSM SecureString via core.config (CLAUDE.md Python
-# Standards: "Secrets via AWS SSM Parameter Store, never hardcoded"), not a
-# plain Lambda environment variable, which is visible to anyone with
-# lambda:GetFunctionConfiguration and isn't rotated independently of a deploy.
-def _internal_api_key() -> str:
-    return get_param("INTERNAL_API_KEY")
 
 
 def _is_throttled(exception: BaseException) -> bool:
@@ -115,9 +106,7 @@ def push_transactions_to_ledger(
         return LedgerPushResult(job_id=job_id, success_count=0, total_count=0, all_succeeded=True)
 
     headers = {
-        "x-internal-api-key": _internal_api_key(),
         "X-Internal-User-Id": user_id,
-        "Content-Type": "application/json",
     }
     body = {
         "statementId": statement_id,

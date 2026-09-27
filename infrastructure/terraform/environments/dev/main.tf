@@ -189,13 +189,8 @@ module "ledger_push_lambda" {
   log_retention_days       = var.log_retention_days
   tags                     = local.common_tags
 
-  # Dev only, per this task's scope: INTERNAL_API_KEY passed straight from tfvars, not SSM
-  # SecureString — core/config.py::get_param() reads the plain env var when present. Production
-  # must not follow this pattern (CLAUDE.md's Python Standards: "Secrets via AWS SSM Parameter
-  # Store, never hardcoded").
   environment_variables = merge(local.shared_env, {
     LEDGER_API_URL    = var.ledger_api_url
-    INTERNAL_API_KEY  = var.internal_api_key
     JOB_TRACKER_TABLE = module.job_tracker_table.table_name
   })
 
@@ -239,8 +234,7 @@ module "s3_processor_lambda" {
     # REQ-DP-05: looks up the statement's verified owner from the Ledger before trusting
     # anything about who it belongs to — same Ledger reachability caveat as ledger_push_lambda
     # below (a locally-run Ledger needs a tunnel; see the Terraform README).
-    LEDGER_API_URL   = var.ledger_api_url
-    INTERNAL_API_KEY = var.internal_api_key
+    LEDGER_API_URL = var.ledger_api_url
   })
 
   extra_policy_statements = [

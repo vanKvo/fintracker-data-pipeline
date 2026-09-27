@@ -31,7 +31,7 @@ environment. Nothing here is dev-specific except what lives under `environments/
 ## Dev environment: no SSM / Secrets Manager
 
 Per this environment's scope, dev does **not** provision `aws_ssm_parameter` resources. Every
-value the application needs (`INTERNAL_API_KEY`, `LEDGER_API_URL`, resource limits, etc.) is
+value the application needs (`LEDGER_API_URL`, resource limits, etc.) is
 declared in `variables.tf` and passed straight through as plain Lambda environment variables from
 `terraform.tfvars`. `core/config.py::get_param()` checks the environment first and only falls back
 to SSM when a variable isn't set that way — see that file for the exact fallback.
@@ -54,7 +54,7 @@ follow this pattern.
    ```bash
    cd infrastructure/terraform/environments/dev
    cp terraform.tfvars.example terraform.tfvars
-   # edit terraform.tfvars — see inline comments, especially ledger_api_url and internal_api_key
+   # edit terraform.tfvars — see inline comments, especially ledger_api_url
    ```
 3. **Init and apply:**
    ```bash
