@@ -1,6 +1,6 @@
 """Unit tests for the Normalizer and Gatekeeper services.
 
-Uses moto to mock DynamoDB and avoids actual Comprehend / YOLO calls.
+Categorization needs no AWS calls (REQ-DP-09), so no DynamoDB/Comprehend mocking.
 
 __author__ = "Van Vo"
 """
@@ -8,11 +8,6 @@ __author__ = "Van Vo"
 from __future__ import annotations
 
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
-
-import boto3
-import pytest
-from moto import mock_aws
 
 from src.extractor.schemas import RawTransaction, TextractOutput
 from src.categorizer.service import _regex_categorize
@@ -52,7 +47,7 @@ class TestParseAmount:
 class TestRegexCategorize:
     def test_uber_eats_before_uber(self):
         result = _regex_categorize("uber eats order")
-        assert result == ("Food & Drink", "Delivery")
+        assert result == ("Dining", "Delivery")
 
     def test_uber(self):
         result = _regex_categorize("uber trip")
@@ -68,49 +63,8 @@ class TestRegexCategorize:
         assert _regex_categorize("local deli corner") is None
 
 
-@mock_aws
 class TestNormalizeAndCategorize:
-    def setup_method(self, method):
-        """Seed MerchantRegistry DynamoDB for registry lookup tests."""
-        import os
-        os.environ["MERCHANT_REGISTRY_TABLE"] = "FinTracker_MerchantRegistry_Test"
-        os.environ["JOB_TRACKER_TABLE"] = "FinTracker_JobTracker_Test"
-        os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
-
-        dynamodb = boto3.resource("dynamodb", region_name="us-east-1")
-        table = dynamodb.create_table(
-            TableName="FinTracker_MerchantRegistry_Test",
-            KeySchema=[
-                {"AttributeName": "PK", "KeyType": "HASH"},
-                {"AttributeName": "SK", "KeyType": "RANGE"},
-            ],
-            AttributeDefinitions=[
-                {"AttributeName": "PK", "AttributeType": "S"},
-                {"AttributeName": "SK", "AttributeType": "S"},
-            ],
-            BillingMode="PAY_PER_REQUEST",
-        )
-        table.put_item(Item={
-            "PK": "petco",
-            "SK": "DETAILS",
-            "category": "Services",
-            "sub_category": "Pets",
-            "confidence": Decimal("0.95"),
-        })
-
-        # Override the global table in the repository to use the mock table. Only the
-        # MerchantRegistry table is actually exercised by normalize_and_categorize (the service
-        # layer tested below never calls update_job_status — that's the handler's job), but the
-        # ingestion_repo table still needs to resolve to *something* moto knows about so an
-        # unrelated accidental call doesn't raise ResourceNotFoundException instead of failing
-        # the assertion it should fail.
-        from src.categorizer import repository as categorizer_repo
-        from src.statement_ingestion import repository as ingestion_repo
-        categorizer_repo._merchant_registry_table = table
-        ingestion_repo._job_tracker_table = table
-
-    def test_regex_path_no_dynamo_call(self):
-        """Uber should resolve via Regex — DynamoDB should NOT be queried."""
+    def test_regex_path(self):
         textract_output = TextractOutput(
             job_id="job-1",
             user_id="user-1",
@@ -120,29 +74,10 @@ class TestNormalizeAndCategorize:
                 RawTransaction(raw_merchant="UBER TRIP", raw_amount="14.50", raw_date="2026-04-01")
             ],
         )
-        with patch("src.categorizer.service.lookup_merchant") as mock_lookup:
-            result = normalize_and_categorize(textract_output)
+        result = normalize_and_categorize(textract_output)
 
-        mock_lookup.assert_not_called()
         assert len(result) == 1
         assert result[0].category == "Transportation"
-
-    def test_registry_path(self):
-        """Petco in registry, should NOT call Comprehend."""
-        textract_output = TextractOutput(
-            job_id="job-2",
-            user_id="user-1",
-            statement_id="stmt-1",
-            account_id="acc-1",
-            raw_transactions=[
-                RawTransaction(raw_merchant="petco", raw_amount="32.00", raw_date="2026-04-05")
-            ],
-        )
-        with patch("src.categorizer.service._comprehend_categorize") as mock_comprehend:
-            result = normalize_and_categorize(textract_output)
-
-        mock_comprehend.assert_not_called()
-        assert result[0].category == "Services"
 
     def test_skips_unparsable_amounts(self):
         textract_output = TextractOutput(
