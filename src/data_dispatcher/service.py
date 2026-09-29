@@ -22,6 +22,7 @@ import requests as _requests
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from ..core.observability import logger
+from ..shared.exceptions import LedgerNotConfiguredError
 from ..shared.sigv4 import sign_headers
 from .schemas import LedgerPushResult
 
@@ -100,6 +101,9 @@ def push_transactions_to_ledger(
             call covers exactly one statement (REQ-STMT-02).
         transactions: List of serialized NormalizedTransaction dicts.
 
+    Raises:
+        LedgerNotConfiguredError: LEDGER_API_URL is unset.
+
     Returns:
         LedgerPushResult with success/total counts. success_count counts both newly inserted
         rows and rows already present from a prior attempt (skipped as duplicates) — both are
@@ -109,6 +113,11 @@ def push_transactions_to_ledger(
     """
     if not transactions:
         return LedgerPushResult(job_id=job_id, success_count=0, total_count=0, all_succeeded=True)
+
+    # A missing URL is a deployment error, not a transient push failure — without this check
+    # SigV4 signing crashes on the host-less URL and the job is misreported as a push failure.
+    if not _LEDGER_API_URL:
+        raise LedgerNotConfiguredError("LEDGER_API_URL is not set")
 
     url = f"{_LEDGER_API_URL}/api/v1/ledger/transactions/internal/bulk"
     headers = {

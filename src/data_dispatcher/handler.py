@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..core.observability import logger, tracer
+from ..shared.exceptions import PipelineError
 from ..shared.schemas import PipelineStatus
 from ..statement_ingestion.service import update_job_status
 from .service import push_transactions_to_ledger
@@ -30,7 +31,13 @@ def ledger_push_handler(event: dict[str, Any], context: Any) -> dict:
     statement_id: str = event["statement_id"]
     transactions: list[dict] = event.get("transactions", [])
 
-    result = push_transactions_to_ledger(job_id, user_id, statement_id, transactions)
+    try:
+        result = push_transactions_to_ledger(job_id, user_id, statement_id, transactions)
+    except PipelineError as e:
+        # The reason code (not str(e)) is what the status API exposes to the user.
+        logger.exception("Ledger push could not start", job_id=job_id, reason=e.reason)
+        update_job_status(job_id, user_id, PipelineStatus.FAILED, error=e.reason)
+        raise
 
     if result.all_succeeded:
         status = PipelineStatus.COMPLETED

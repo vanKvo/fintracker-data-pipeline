@@ -50,6 +50,12 @@ class LedgerPushFailedError(PipelineError):
     reason = "LEDGER_PUSH_FAILED"
 
 
+class LedgerNotConfiguredError(PipelineError):
+    """LEDGER_API_URL is unset — fail loudly instead of signing a host-less URL."""
+
+    reason = "LEDGER_NOT_CONFIGURED"
+
+
 class UnknownBankMappingError(PipelineError):
     """Raised only when the caller needs a hard failure. The Gatekeeper's
     normal path does NOT raise this — REQ-DP-01 F. Error Handling requires
