@@ -24,7 +24,7 @@ variable "log_retention_days" {
 }
 
 variable "execution_timeout_seconds" {
-  description = "REQ-DP-01 F. Error Handling — MAPPING_CONFIRMATION_TIMEOUT: bounds how long an execution can sit paused at the Gatekeeper's waitForTaskToken step (or anywhere else) before Step Functions force-fails it, so an abandoned mapping-confirmation dialog doesn't hold an execution open forever. 86400s (24h) matches the old CDK stack's `timeout=Duration.hours(24)` on the StateMachine construct, which this Terraform port had been missing entirely (no TimeoutSeconds was ever set)."
+  description = "REQ-DP-01 F. Error Handling — CSV_COL_MAPPING_CONFIRMATION_TIMEOUT: bounds how long an execution can sit paused at the Gatekeeper's waitForTaskToken step (or anywhere else) before Step Functions force-fails it, so an abandoned csv-col-mapping-confirmation dialog doesn't hold an execution open forever. 86400s (24h) matches the old CDK stack's `timeout=Duration.hours(24)` on the StateMachine construct, which this Terraform port had been missing entirely (no TimeoutSeconds was ever set)."
   type        = number
   default     = 86400
 }

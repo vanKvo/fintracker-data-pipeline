@@ -65,7 +65,7 @@ resource "aws_iam_role_policy" "logging" {
   })
 }
 
-# STANDARD, not EXPRESS: Gatekeeper's user mapping-confirmation pause (waitForTaskToken) can wait
+# STANDARD, not EXPRESS: Gatekeeper's user csv-col-mapping-confirmation pause (waitForTaskToken) can wait
 # indefinitely on human input. EXPRESS caps total execution at 5 minutes, which the pause can
 # easily exceed — same reasoning the original CDK stack documented.
 resource "aws_sfn_state_machine" "pipeline" {

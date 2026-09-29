@@ -15,6 +15,6 @@ output "state_machine_arn" {
 }
 
 output "data_pipeline_api_url" {
-  description = "Feed this into the Ledger/UI config as the Data Pipeline's polling + mapping-confirmation base URL."
+  description = "Feed this into the Ledger/UI config as the Data Pipeline's polling + csv-col-mapping-confirmation base URL."
   value       = module.http_api.api_endpoint
 }

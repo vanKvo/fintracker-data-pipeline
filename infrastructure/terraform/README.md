@@ -86,9 +86,9 @@ none of those stages call the Ledger — only the final `LedgerPush` step does.
   DynamoDB, Step Functions task-token resolution — scoped per function, matching what each
   handler's code actually touches).
 - **Step Functions STANDARD state machine** — `Gatekeeper -> Extractor -> Normalizer -> LedgerPush`,
-  with the mapping-confirmation pause (`waitForTaskToken`) and per-task failure routing.
+  with the csv-col-mapping-confirmation pause (`waitForTaskToken`) and per-task failure routing.
 - **HTTP API (v2)** with a Cognito JWT authorizer, exposing `GET /jobs/{jobId}` and
-  `POST /jobs/{jobId}/mapping-confirmation`, both authenticated against the shared Cognito User
+  `POST /jobs/{jobId}/csv-col-mapping-confirmation`, both authenticated against the shared Cognito User
   Pool passed in via `cognito_user_pool_id`/`cognito_user_pool_client_id`.
 
 ## Cost note (dev)

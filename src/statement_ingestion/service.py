@@ -34,7 +34,7 @@ def update_job_status(
         status: Current pipeline stage.
         error: Optional error message on failure.
         task_token: Step Functions task token to persist, if this update
-            pauses the job for user input (see PENDING_MAPPING_CONFIRMATION).
+            pauses the job for user input (see PENDING_CSV_COL_MAPPING_CONFIRMATION).
     """
     _update_job_status(job_id, user_id, status, error, task_token, mapping_proposal)
 

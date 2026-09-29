@@ -80,9 +80,9 @@ class TestReqDp01BankSpecificColumnMapping:
         assert proposal.unmapped_columns == []
 
 
-class TestReqDp01MappingConfirmationDialog:
-    def test_pending_mapping_confirmation_status_exists(self):
-        assert hasattr(PipelineStatus, "PENDING_MAPPING_CONFIRMATION")
+class TestReqDp01CsvColMappingConfirmationDialog:
+    def test_pending_csv_col_mapping_confirmation_status_exists(self):
+        assert hasattr(PipelineStatus, "PENDING_CSV_COL_MAPPING_CONFIRMATION")
 
     def test_propose_column_mapping_function_exists(self):
         import src.gatekeeper.service as gk_service

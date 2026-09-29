@@ -78,7 +78,7 @@ module "gatekeeper_lambda" {
     {
       # run_gatekeeper proposes a column mapping by reading the bank's known variants
       # (get_bank_mapping -> GetItem); confirming/correcting a mapping is a different Lambda
-      # (mapping_confirmation), which is the only one that writes here.
+      # (csv_col_mapping_confirmation), which is the only one that writes here.
       sid       = "ReadBankMapping"
       actions   = ["dynamodb:GetItem"]
       resources = [module.bank_mapping_table.table_arn]
@@ -271,10 +271,10 @@ module "status_lambda" {
   ]
 }
 
-module "mapping_confirmation_lambda" {
+module "csv_col_mapping_confirmation_lambda" {
   source                   = "../../modules/lambda_function"
-  function_name            = "${local.name}-MappingConfirmation"
-  handler                  = "src.gatekeeper.mapping_confirmation_handler.mapping_confirmation_handler"
+  function_name            = "${local.name}-CsvColMappingConfirmation"
+  handler                  = "src.gatekeeper.csv_col_mapping_confirmation_handler.csv_col_mapping_confirmation_handler"
   memory_size              = 256
   timeout                  = 30
   package_filename         = data.archive_file.lambda_package.output_path
@@ -311,14 +311,14 @@ module "mapping_confirmation_lambda" {
 }
 
 module "http_api" {
-  source                                    = "../../modules/http_api"
-  api_name                                  = "${local.name}-Api"
-  aws_region                                = var.aws_region
-  cognito_user_pool_id                      = var.cognito_user_pool_id
-  cognito_user_pool_client_id               = var.cognito_user_pool_client_id
-  status_lambda_arn                         = module.status_lambda.invoke_arn
-  status_lambda_function_name               = module.status_lambda.function_name
-  mapping_confirmation_lambda_arn           = module.mapping_confirmation_lambda.invoke_arn
-  mapping_confirmation_lambda_function_name = module.mapping_confirmation_lambda.function_name
-  tags                                      = local.common_tags
+  source                                            = "../../modules/http_api"
+  api_name                                          = "${local.name}-Api"
+  aws_region                                        = var.aws_region
+  cognito_user_pool_id                              = var.cognito_user_pool_id
+  cognito_user_pool_client_id                       = var.cognito_user_pool_client_id
+  status_lambda_arn                                 = module.status_lambda.invoke_arn
+  status_lambda_function_name                       = module.status_lambda.function_name
+  csv_col_mapping_confirmation_lambda_arn           = module.csv_col_mapping_confirmation_lambda.invoke_arn
+  csv_col_mapping_confirmation_lambda_function_name = module.csv_col_mapping_confirmation_lambda.function_name
+  tags                                              = local.common_tags
 }

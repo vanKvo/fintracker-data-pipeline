@@ -48,11 +48,11 @@ resource "aws_lambda_permission" "status_invoke" {
   source_arn    = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
 }
 
-# POST /jobs/{jobId}/mapping-confirmation — resumes the paused Step Functions execution.
-resource "aws_apigatewayv2_integration" "mapping_confirmation" {
+# POST /jobs/{jobId}/csv-col-mapping-confirmation — resumes the paused Step Functions execution.
+resource "aws_apigatewayv2_integration" "csv_col_mapping_confirmation" {
   api_id                 = aws_apigatewayv2_api.this.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = var.mapping_confirmation_lambda_arn
+  integration_uri        = var.csv_col_mapping_confirmation_lambda_arn
   payload_format_version = "2.0"
 
   request_parameters = {
@@ -60,18 +60,18 @@ resource "aws_apigatewayv2_integration" "mapping_confirmation" {
   }
 }
 
-resource "aws_apigatewayv2_route" "mapping_confirmation" {
+resource "aws_apigatewayv2_route" "csv_col_mapping_confirmation" {
   api_id             = aws_apigatewayv2_api.this.id
-  route_key          = "POST /jobs/{jobId}/mapping-confirmation"
-  target             = "integrations/${aws_apigatewayv2_integration.mapping_confirmation.id}"
+  route_key          = "POST /jobs/{jobId}/csv-col-mapping-confirmation"
+  target             = "integrations/${aws_apigatewayv2_integration.csv_col_mapping_confirmation.id}"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
 }
 
-resource "aws_lambda_permission" "mapping_confirmation_invoke" {
+resource "aws_lambda_permission" "csv_col_mapping_confirmation_invoke" {
   statement_id  = "AllowApiGatewayInvoke"
   action        = "lambda:InvokeFunction"
-  function_name = var.mapping_confirmation_lambda_function_name
+  function_name = var.csv_col_mapping_confirmation_lambda_function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.this.execution_arn}/*/*"
 }

@@ -59,8 +59,8 @@ class UnknownBankMappingError(PipelineError):
     reason = "UNKNOWN_BANK_MAPPING"
 
 
-class MappingConfirmationTimeoutError(PipelineError):
-    reason = "MAPPING_CONFIRMATION_TIMEOUT"
+class CsvColMappingConfirmationTimeoutError(PipelineError):
+    reason = "CSV_COL_MAPPING_CONFIRMATION_TIMEOUT"
 
 
 class CsvRowParseError(PipelineError):

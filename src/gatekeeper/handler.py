@@ -74,7 +74,7 @@ def gatekeeper_handler(event: dict[str, Any], context: Any) -> dict:
             _sfn_client.send_task_failure(taskToken=task_token, error=reason, cause=str(e))
         raise
 
-    if output.requires_mapping_confirmation:
+    if output.requires_csv_col_mapping_confirmation:
         # Pause: store the token AND the proposed mapping (mapped/unmapped
         # columns — the UI needs this to render the confirmation dialog,
         # not just to know a confirmation is pending), do NOT resolve the
@@ -83,7 +83,7 @@ def gatekeeper_handler(event: dict[str, Any], context: Any) -> dict:
         update_job_status(
             job_id,
             user_id,
-            PipelineStatus.PENDING_MAPPING_CONFIRMATION,
+            PipelineStatus.PENDING_CSV_COL_MAPPING_CONFIRMATION,
             task_token=task_token,
             mapping_proposal=output.mapping_proposal.model_dump() if output.mapping_proposal else None,
         )

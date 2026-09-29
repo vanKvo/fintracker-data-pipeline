@@ -23,11 +23,11 @@ variable "status_lambda_function_name" {
   type = string
 }
 
-variable "mapping_confirmation_lambda_arn" {
+variable "csv_col_mapping_confirmation_lambda_arn" {
   type = string
 }
 
-variable "mapping_confirmation_lambda_function_name" {
+variable "csv_col_mapping_confirmation_lambda_function_name" {
   type = string
 }
 

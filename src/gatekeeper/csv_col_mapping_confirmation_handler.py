@@ -15,14 +15,14 @@ import json
 from typing import Any
 
 from ..core.observability import logger, tracer
-from ..shared.exceptions import InvalidCsvFormatError, MappingConfirmationTimeoutError, PipelineError
+from ..shared.exceptions import InvalidCsvFormatError, CsvColMappingConfirmationTimeoutError, PipelineError
 from .service import confirm_column_mapping
 
 
 @tracer.capture_lambda_handler
 @logger.inject_lambda_context
-def mapping_confirmation_handler(event: dict[str, Any], context: Any) -> dict:
-    """API Gateway handler — POST /jobs/{jobId}/mapping-confirmation.
+def csv_col_mapping_confirmation_handler(event: dict[str, Any], context: Any) -> dict:
+    """API Gateway handler — POST /jobs/{jobId}/csv-col-mapping-confirmation.
 
     Args:
         event: API Gateway proxy event. Path parameter `jobId` (== the
@@ -47,7 +47,7 @@ def mapping_confirmation_handler(event: dict[str, Any], context: Any) -> dict:
         confirm_column_mapping(job_id, bank_id, confirmed_mapping)
     except InvalidCsvFormatError as e:
         return _problem_response(400, e.reason, str(e))
-    except MappingConfirmationTimeoutError as e:
+    except CsvColMappingConfirmationTimeoutError as e:
         return _problem_response(409, e.reason, str(e))
     except PipelineError as e:
         logger.exception("Mapping confirmation failed", job_id=job_id, reason=e.reason)

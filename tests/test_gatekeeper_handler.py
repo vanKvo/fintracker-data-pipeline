@@ -86,7 +86,7 @@ class TestGatekeeperHandlerStatus:
             statement_format=StatementFormat.CSV,
             csv_s3_key="stmt.csv",
             mapping_proposal=proposal,
-            requires_mapping_confirmation=True,
+            requires_csv_col_mapping_confirmation=True,
         )
         with (
             patch("src.gatekeeper.handler.run_gatekeeper", return_value=output),
@@ -98,7 +98,7 @@ class TestGatekeeperHandlerStatus:
         mock_status.assert_called_once_with(
             "job-1",
             "user-1",
-            PipelineStatus.PENDING_MAPPING_CONFIRMATION,
+            PipelineStatus.PENDING_CSV_COL_MAPPING_CONFIRMATION,
             task_token="token-1",
             mapping_proposal=proposal.model_dump(),
         )

@@ -31,7 +31,7 @@ from src.gatekeeper.service import (
 from src.shared.exceptions import (
     FileTooLargeError,
     InvalidCsvFormatError,
-    MappingConfirmationTimeoutError,
+    CsvColMappingConfirmationTimeoutError,
     UnsupportedFormatError,
 )
 from src.shared.schemas import PipelineStatus
@@ -186,7 +186,7 @@ class TestConfirmColumnMapping:
     def test_confirming_resumes_the_paused_execution(self):
         from src.statement_ingestion.service import get_job, update_job_status
 
-        update_job_status("job-1", "user-1", PipelineStatus.PENDING_MAPPING_CONFIRMATION, task_token="token-1")
+        update_job_status("job-1", "user-1", PipelineStatus.PENDING_CSV_COL_MAPPING_CONFIRMATION, task_token="token-1")
 
         with patch("src.gatekeeper.service._sfn_client") as mock_sfn:
             confirm_column_mapping("job-1", "chase", {"date": "Transaction Date", "merchant": "Description", "amount": "Debit"})
@@ -204,7 +204,7 @@ class TestConfirmColumnMapping:
 
     def test_job_with_no_pending_confirmation_raises_timeout(self):
         # No update_job_status call at all for this job_id — get_job returns None.
-        with pytest.raises(MappingConfirmationTimeoutError):
+        with pytest.raises(CsvColMappingConfirmationTimeoutError):
             confirm_column_mapping(
                 "never-paused-job", "chase", {"date": "d", "merchant": "m", "amount": "a"}
             )
@@ -219,7 +219,7 @@ class TestRunGatekeeperCsv:
         s3.create_bucket(Bucket=self.bucket)
         self.s3 = s3
 
-    def test_valid_csv_requires_mapping_confirmation(self):
+    def test_valid_csv_requires_csv_col_mapping_confirmation(self):
         self.s3.put_object(Bucket=self.bucket, Key="stmt.csv", Body=_valid_csv_bytes())
         with patch("src.gatekeeper.service._s3_client", self.s3):
             output = run_gatekeeper(
@@ -231,7 +231,7 @@ class TestRunGatekeeperCsv:
                 account_id="acct-1",
                 bank_id="chase",
             )
-        assert output.requires_mapping_confirmation is True
+        assert output.requires_csv_col_mapping_confirmation is True
         assert output.mapping_proposal is not None
         assert output.csv_s3_key == "stmt.csv"
         assert output.statement_format == StatementFormat.CSV

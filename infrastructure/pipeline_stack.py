@@ -36,7 +36,7 @@ class DataPipelineStack(Stack):
 
     Provisions:
       - Lambda Functions (one per Step Function task, plus the standalone
-        mapping-confirmation callback endpoint)
+        csv-col-mapping-confirmation callback endpoint)
       - S3 Processor Lambda triggered by S3 PutObject events
       - Step Functions STANDARD State Machine orchestrating the pipeline
       - IAM roles with least-privilege policies
@@ -107,16 +107,16 @@ class DataPipelineStack(Stack):
         )
 
         # ─── Lambda: Mapping Confirmation (API Gateway-invoked, out of band) ──
-        mapping_confirmation_fn = _lambda.Function(
-            self, "MappingConfirmationLambda",
+        csv_col_mapping_confirmation_fn = _lambda.Function(
+            self, "CsvColMappingConfirmationLambda",
             runtime=_lambda.Runtime.PYTHON_3_12,
-            handler="src.gatekeeper.mapping_confirmation_handler.mapping_confirmation_handler",
+            handler="src.gatekeeper.csv_col_mapping_confirmation_handler.csv_col_mapping_confirmation_handler",
             code=_lambda.Code.from_asset("."),
             memory_size=256,
             timeout=Duration.seconds(30),
             environment=shared_env,
         )
-        mapping_confirmation_fn.add_to_role_policy(
+        csv_col_mapping_confirmation_fn.add_to_role_policy(
             iam.PolicyStatement(actions=["states:SendTaskSuccess"], resources=["*"])
         )
         # Routed via the HTTP API + Cognito authorizer defined below, not a
@@ -210,7 +210,7 @@ class DataPipelineStack(Stack):
             result_path="$.gatekeeperOutput",
             # No fixed heartbeat: a user reviewing the mapping dialog may
             # legitimately take minutes. REQ-DP-01 F. Error Handling —
-            # MAPPING_CONFIRMATION_TIMEOUT is enforced by the overall
+            # CSV_COL_MAPPING_CONFIRMATION_TIMEOUT is enforced by the overall
             # execution timeout below, not a per-task heartbeat.
         )
 
@@ -266,7 +266,7 @@ class DataPipelineStack(Stack):
             state_machine_name=f"FinTracker-StatementUpload-{env_name}",
             definition_body=sfn.DefinitionBody.from_chainable(pipeline_definition),
             state_machine_type=sfn.StateMachineType.STANDARD,
-            timeout=Duration.hours(24),  # REQ-DP-01 F. Error Handling — MAPPING_CONFIRMATION_TIMEOUT
+            timeout=Duration.hours(24),  # REQ-DP-01 F. Error Handling — CSV_COL_MAPPING_CONFIRMATION_TIMEOUT
             logs=sfn.LogOptions(
                 destination=log_group,
                 level=sfn.LogLevel.ALL,
@@ -317,10 +317,10 @@ class DataPipelineStack(Stack):
             ),
         )
         http_api.add_routes(
-            path="/jobs/{jobId}/mapping-confirmation",
+            path="/jobs/{jobId}/csv-col-mapping-confirmation",
             methods=[apigwv2.HttpMethod.POST],
             integration=apigwv2_integrations.HttpLambdaIntegration(
-                "MappingConfirmationIntegration", mapping_confirmation_fn, parameter_mapping=user_id_header_mapping
+                "CsvColMappingConfirmationIntegration", csv_col_mapping_confirmation_fn, parameter_mapping=user_id_header_mapping
             ),
         )
 

@@ -29,7 +29,7 @@ from ..core.observability import logger
 from ..shared.exceptions import (
     FileTooLargeError,
     InvalidCsvFormatError,
-    MappingConfirmationTimeoutError,
+    CsvColMappingConfirmationTimeoutError,
     TooManyPagesError,
     UnsupportedFormatError,
 )
@@ -187,7 +187,7 @@ def confirm_column_mapping(job_id: str, bank_id: str, confirmed_mapping: dict[st
     mapping table (REQ-DP-01 B. Constraints — a runtime-writable store, so
     the correction improves every future upload for this bank), then sends
     a Step Functions task success to resume the execution that's been
-    waiting at PENDING_MAPPING_CONFIRMATION.
+    waiting at PENDING_CSV_COL_MAPPING_CONFIRMATION.
 
     Args:
         job_id: Step Function execution ID, used to look up the stored
@@ -199,7 +199,7 @@ def confirm_column_mapping(job_id: str, bank_id: str, confirmed_mapping: dict[st
     Raises:
         InvalidCsvFormatError: If the confirmed mapping is missing any
             required canonical field.
-        MappingConfirmationTimeoutError: If the job has no stored task
+        CsvColMappingConfirmationTimeoutError: If the job has no stored task
             token — it was never paused, already resumed, or its Job
             Tracker record has expired.
     """
@@ -209,7 +209,7 @@ def confirm_column_mapping(job_id: str, bank_id: str, confirmed_mapping: dict[st
 
     job = get_job(job_id)
     if not job or not job.get("task_token"):
-        raise MappingConfirmationTimeoutError(
+        raise CsvColMappingConfirmationTimeoutError(
             f"Job {job_id} has no pending mapping confirmation to resume"
         )
 
@@ -252,7 +252,7 @@ def run_gatekeeper(
             Required for CSV; ignored for PDF/Image.
 
     Returns:
-        A GatekeeperOutput. For CSV, requires_mapping_confirmation is True
+        A GatekeeperOutput. For CSV, requires_csv_col_mapping_confirmation is True
         and mapping_proposal is populated. For PDF/Image, the file is
         ready for the Extractor's Tier 1/Tier 2 waterfall.
 
@@ -290,7 +290,7 @@ def run_gatekeeper(
             statement_format=statement_format,
             csv_s3_key=s3_key,
             mapping_proposal=mapping_proposal,
-            requires_mapping_confirmation=True,
+            requires_csv_col_mapping_confirmation=True,
         )
 
     page_count = 1

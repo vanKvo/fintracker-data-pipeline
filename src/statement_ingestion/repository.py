@@ -30,7 +30,7 @@ def update_job_status(
 ) -> None:
     """Update the asynchronous pipeline job status in DynamoDB.
 
-    Sets a 7-day TTL automatically. When status is PENDING_MAPPING_CONFIRMATION,
+    Sets a 7-day TTL automatically. When status is PENDING_CSV_COL_MAPPING_CONFIRMATION,
     task_token must be supplied so a later confirm_column_mapping call can
     resume the paused Step Functions execution (the `.waitForTaskToken`
     callback pattern) — the token is only ever written here, never logged.

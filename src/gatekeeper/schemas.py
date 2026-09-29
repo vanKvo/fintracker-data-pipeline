@@ -34,7 +34,7 @@ class ColumnMappingProposal(BaseModel):
 class GatekeeperOutput(BaseModel):
     """Output produced by the Gatekeeper Lambda.
 
-    For CSV, mapping_proposal is always populated and requires_mapping_confirmation
+    For CSV, mapping_proposal is always populated and requires_csv_col_mapping_confirmation
     is True — the Extractor never runs on a CSV until a human confirms the
     mapping (REQ-DP-01 "User Mapping Confirmation Gate").
 
@@ -56,4 +56,4 @@ class GatekeeperOutput(BaseModel):
     page_count: int = 1
     csv_s3_key: str | None = None
     mapping_proposal: ColumnMappingProposal | None = None
-    requires_mapping_confirmation: bool = False
+    requires_csv_col_mapping_confirmation: bool = False
