@@ -2,8 +2,8 @@
 spanning gatekeeper, extractor, normalizer, data_dispatcher, and ledger_client.
 
 Each class was written F2P ("fail to pass") against its requirement before that
-requirement's implementation landed. REQ-DP-03 is still red (not yet implemented);
-the rest are now green — see data-pipeline-tests-01.md for the requirement each maps to.
+requirement's implementation landed; all are now green — see data-pipeline-tests-01.md for the
+requirement each maps to.
 
 __author__ = "Van Vo"
 """
@@ -161,15 +161,21 @@ class TestReqDp02BatchedLedgerPush:
 
 
 class TestReqDp03LedgerPushIdempotency:
-    def test_repeated_push_of_same_job_does_not_duplicate_ledger_calls(self):
-        """Re-running the same job (e.g. a retried Step Functions task, or
-        a duplicate S3 event triggering the whole pipeline twice) should
-        not create duplicate Ledger transactions on the second attempt."""
+    """Idempotency lives in the Ledger, not the DP: a retried push re-sends the same row
+    fingerprints, the Ledger's (statement_id, row_fingerprint) unique index skips them, and the
+    DP counts those skipped duplicates as success."""
+
+    def test_retried_push_resends_same_fingerprints_and_counts_duplicates_as_success(self):
+        import json
+
         from src.data_dispatcher.service import push_transactions_to_ledger
 
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status.return_value = None
-        mock_resp.json.return_value = {"insertedCount": 1, "skippedDuplicateCount": 0, "failedRows": []}
+        def _response(inserted: int, skipped: int) -> MagicMock:
+            resp = MagicMock()
+            resp.raise_for_status.return_value = None
+            resp.json.return_value = {"insertedCount": inserted, "skippedDuplicateCount": skipped, "failedRows": []}
+            return resp
+
         tx = {
             "tx_date": "2026-04-01",
             "merchant": "starbucks",
@@ -180,11 +186,34 @@ class TestReqDp03LedgerPushIdempotency:
             "row_fingerprint": "a" * 64,
         }
 
-        with patch("src.data_dispatcher.service._requests.post", return_value=mock_resp) as mock_post:
+        with (
+            patch("src.data_dispatcher.service._LEDGER_API_URL", "https://ledger.test"),
+            patch("src.data_dispatcher.service.sign_headers", side_effect=lambda m, u, h, b=b"": h),
+            patch(
+                "src.data_dispatcher.service._requests.post",
+                side_effect=[_response(inserted=1, skipped=0), _response(inserted=0, skipped=1)],
+            ) as mock_post,
+        ):
             push_transactions_to_ledger("job-1", "user-1", "stmt-1", [tx])
-            push_transactions_to_ledger("job-1", "user-1", "stmt-1", [tx])
+            retry_result = push_transactions_to_ledger("job-1", "user-1", "stmt-1", [tx])
 
-        assert mock_post.call_count == 1
+        bodies = [json.loads(call.kwargs["data"]) for call in mock_post.call_args_list]
+        assert bodies[0]["transactions"][0]["rowFingerprint"] == bodies[1]["transactions"][0]["rowFingerprint"]
+        assert retry_result.all_succeeded is True
+        assert retry_result.success_count == retry_result.total_count == 1
+
+    def test_missing_ledger_url_is_a_configuration_error_not_a_signing_crash(self):
+        from src.data_dispatcher.service import push_transactions_to_ledger
+        from src.shared.exceptions import LedgerNotConfiguredError
+
+        with (
+            patch("src.data_dispatcher.service._LEDGER_API_URL", ""),
+            patch("src.data_dispatcher.service._requests.post") as mock_post,
+        ):
+            with pytest.raises(LedgerNotConfiguredError):
+                push_transactions_to_ledger("job-1", "user-1", "stmt-1", [{"row_fingerprint": "a" * 64}])
+
+        mock_post.assert_not_called()
 
 
 class TestReqDp05TenantIdentityVerification:

@@ -63,3 +63,20 @@ class TestLedgerPushJobStatus:
 
         args, kwargs = mock_status.call_args
         assert args[2] == PipelineStatus.FAILED
+
+
+class TestLedgerNotConfigured:
+    def test_missing_ledger_url_marks_job_failed_with_reason_code(self):
+        from src.shared.exceptions import LedgerNotConfiguredError
+
+        with (
+            patch(
+                "src.data_dispatcher.handler.push_transactions_to_ledger",
+                side_effect=LedgerNotConfiguredError("LEDGER_API_URL is not set"),
+            ),
+            patch("src.data_dispatcher.handler.update_job_status") as mock_status,
+        ):
+            with pytest.raises(LedgerNotConfiguredError):
+                ledger_push_handler(_event(), MagicMock())
+
+        mock_status.assert_called_once_with("job-1", "user-1", PipelineStatus.FAILED, error="LEDGER_NOT_CONFIGURED")
