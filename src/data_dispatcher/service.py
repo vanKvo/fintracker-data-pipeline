@@ -28,12 +28,6 @@ from .schemas import LedgerPushResult
 
 _LEDGER_API_URL = os.environ.get("LEDGER_API_URL", "")
 
-# REQ-DP-06: PURCHASE/CREDIT is the Ledger's own vocabulary (BulkCreateTransactionsRequest.
-# TransactionLine.type); SALE/RETURN is this pipeline's internal one (NormalizedTransaction) —
-# translated only at this wire boundary, not renamed pipeline-wide.
-_TYPE_TO_LEDGER = {"SALE": "PURCHASE", "RETURN": "CREDIT"}
-
-
 def _is_throttled(exception: BaseException) -> bool:
     """True for a 429/503 the Ledger returned, or a transient connection
     error — anything worth retrying with backoff rather than failing the
@@ -54,7 +48,8 @@ def _to_ledger_line(tx: dict) -> dict:
         "amount": str(tx["amount"]),
         "category": tx["category"],
         "subCategory": tx.get("sub_category"),
-        "type": _TYPE_TO_LEDGER.get(tx["type"], tx["type"]),
+        "type": tx["type"],
+        "direction": tx["direction"],
         "rowFingerprint": tx["row_fingerprint"],
     }
 

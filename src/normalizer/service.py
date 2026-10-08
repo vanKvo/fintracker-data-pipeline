@@ -93,7 +93,10 @@ def normalize_and_categorize(
             continue
 
         cat_result = categorize_merchant(merchant, bank_category=raw.raw_category)
-        tx_type = "RETURN" if amount < 0 else "SALE"
+        # TXT-01: direction from the sign; type uses TXT-01's default (credit -> INCOME,
+        # debit -> EXPENSE) until DPTXT defines bank-label rules.
+        direction = "CREDIT" if amount < 0 else "DEBIT"
+        tx_type = "INCOME" if direction == "CREDIT" else "EXPENSE"
 
         # REQ-DP-01 "Manual Review Routing": a row below the confidence
         # threshold is flagged for manual review rather than posted at
@@ -112,6 +115,7 @@ def normalize_and_categorize(
                 category=cat_result.category,
                 sub_category=cat_result.sub_category,
                 type=tx_type,
+                direction=direction,
                 confidence=raw.confidence,
                 needs_review=needs_review,
                 row_fingerprint=_row_fingerprint(

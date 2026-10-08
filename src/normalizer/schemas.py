@@ -6,9 +6,14 @@ __author__ = "Van Vo"
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
+
+
+# TXT-01: the Ledger's own vocabulary, used end to end — no translation at the Ledger boundary.
+TransactionType = Literal["EXPENSE", "INCOME", "REFUND", "TRANSFER", "ADJUSTMENT"]
+TransactionDirection = Literal["DEBIT", "CREDIT"]
 
 
 class NormalizedTransaction(BaseModel):
@@ -22,7 +27,8 @@ class NormalizedTransaction(BaseModel):
     category: str
     sub_category: Optional[str] = None
     source: str = "STATEMENT_UPLOAD"
-    type: str = "SALE"
+    type: TransactionType
+    direction: TransactionDirection
     status: str = "PENDING_APPROVAL"
     confidence: Decimal = Decimal("1.00")
     needs_review: bool = False
