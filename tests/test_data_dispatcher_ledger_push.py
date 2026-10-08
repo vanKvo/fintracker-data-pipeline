@@ -27,7 +27,8 @@ _TX = {
     "amount": "5.25",
     "category": "Food & Drink",
     "sub_category": "Coffee Shops",
-    "type": "SALE",
+    "type": "EXPENSE",
+    "direction": "DEBIT",
     "row_fingerprint": "a" * 64,
 }
 
@@ -52,13 +53,16 @@ class TestToLedgerLine:
             "amount": "5.25",
             "category": "Food & Drink",
             "subCategory": "Coffee Shops",
-            "type": "PURCHASE",
+            "type": "EXPENSE",
+            "direction": "DEBIT",
             "rowFingerprint": "a" * 64,
         }
 
-    def test_return_type_maps_to_credit(self):
-        line = _to_ledger_line({**_TX, "type": "RETURN"})
-        assert line["type"] == "CREDIT"
+    def test_type_and_direction_are_sent_unchanged(self):
+        # TXT-01: the pipeline already speaks the Ledger's type vocabulary — no translation.
+        line = _to_ledger_line({**_TX, "type": "REFUND", "direction": "CREDIT"})
+        assert line["type"] == "REFUND"
+        assert line["direction"] == "CREDIT"
 
 
 class TestPushTransactionsToLedger:

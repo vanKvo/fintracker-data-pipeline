@@ -27,7 +27,8 @@ _TX = {
     "amount": "5.25",
     "category": "Food & Drink",
     "sub_category": None,
-    "type": "SALE",
+    "type": "EXPENSE",
+    "direction": "DEBIT",
     "row_fingerprint": "a" * 64,
 }
 

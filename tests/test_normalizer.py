@@ -9,8 +9,12 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
+from pydantic import ValidationError
+
 from src.extractor.schemas import RawTransaction, TextractOutput
 from src.categorizer.service import _regex_categorize
+from src.normalizer.schemas import NormalizedTransaction
 from src.normalizer.service import (
     _clean_merchant,
     _parse_amount,
@@ -91,3 +95,64 @@ class TestNormalizeAndCategorize:
         )
         result = normalize_and_categorize(textract_output)
         assert result == []
+
+
+class TestTransactionTypeAndDirection:
+    """TXT-01: every row leaves the normalizer with one of the Ledger's five types and a direction.
+    Until DPTXT defines type rules, the type follows TXT-01's default: credit -> INCOME, debit -> EXPENSE."""
+
+    @staticmethod
+    def _normalize_one(raw_amount: str):
+        textract_output = TextractOutput(
+            job_id="job-txt",
+            user_id="user-1",
+            statement_id="stmt-1",
+            account_id="acc-1",
+            raw_transactions=[
+                RawTransaction(raw_merchant="CORNER STORE", raw_amount=raw_amount, raw_date="2026-04-01")
+            ],
+        )
+        [tx] = normalize_and_categorize(textract_output)
+        return tx
+
+    def test_charge_is_a_debit_expense(self):
+        tx = self._normalize_one("42.10")
+        assert tx.direction == "DEBIT"
+        assert tx.type == "EXPENSE"
+        assert tx.amount == Decimal("42.10")
+
+    @pytest.mark.parametrize("raw_amount", ["-42.10", "(42.10)"])
+    def test_credit_is_a_credit_income_with_positive_amount(self, raw_amount):
+        tx = self._normalize_one(raw_amount)
+        assert tx.direction == "CREDIT"
+        assert tx.type == "INCOME"
+        assert tx.amount == Decimal("42.10")
+
+    @pytest.mark.parametrize("legacy_type", ["SALE", "RETURN", "PURCHASE", "CREDIT"])
+    def test_rejects_types_outside_the_five(self, legacy_type):
+        with pytest.raises(ValidationError):
+            NormalizedTransaction(
+                account_id="acc-1",
+                statement_id="stmt-1",
+                merchant="corner store",
+                amount=Decimal("1.00"),
+                tx_date="2026-04-01",
+                category="Shopping",
+                type=legacy_type,
+                direction="DEBIT",
+                row_fingerprint="a" * 64,
+            )
+
+    def test_rejects_unknown_direction(self):
+        with pytest.raises(ValidationError):
+            NormalizedTransaction(
+                account_id="acc-1",
+                statement_id="stmt-1",
+                merchant="corner store",
+                amount=Decimal("1.00"),
+                tx_date="2026-04-01",
+                category="Shopping",
+                type="EXPENSE",
+                direction="OUT",
+                row_fingerprint="a" * 64,
+            )

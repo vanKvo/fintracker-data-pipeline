@@ -120,6 +120,8 @@ class TestReqDp01ConfidenceScoring:
             amount=5.25,
             tx_date="2026-04-01",
             category="Food & Drink",
+            type="EXPENSE",
+            direction="DEBIT",
             row_fingerprint="a" * 64,
         )
         assert hasattr(tx, "confidence")
@@ -182,7 +184,8 @@ class TestReqDp03LedgerPushIdempotency:
             "amount": "5.25",
             "category": "Food & Drink",
             "sub_category": None,
-            "type": "SALE",
+            "type": "EXPENSE",
+            "direction": "DEBIT",
             "row_fingerprint": "a" * 64,
         }
 
